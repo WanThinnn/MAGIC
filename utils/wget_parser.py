@@ -11,70 +11,81 @@ import time
 import datetime
 
 
+# Danh sách các loại node hợp lệ trong dữ liệu CamFlow
 valid_node_type = ['file', 'process_memory', 'task', 'mmaped_file', 'path', 'socket', 'address', 'link']
+
+# Biến toàn cục lưu các đối số dòng lệnh, sẽ được gán sau (nếu có)
 CONSOLE_ARGUMENTS = None
 
 
 def hashgen(l):
-    """Generate a single hash value from a list. @l is a list of
-    string values, which can be properties of a node/edge. This
-    function returns a single hashed integer value."""
-    hasher = xxhash.xxh64()
+    """
+    Hàm tạo mã băm từ danh sách chuỗi đầu vào.
+    @param l: Danh sách các chuỗi (thường là các thuộc tính của node hoặc edge)
+    @return: Một giá trị số nguyên duy nhất đại diện cho mã băm của toàn bộ danh sách.
+    """
+    hasher = xxhash.xxh64()  # Sử dụng thuật toán băm xxHash 64-bit
     for e in l:
-        hasher.update(e)
-    return hasher.intdigest()
+        hasher.update(e)  # Cập nhật từng chuỗi vào đối tượng băm
+    return hasher.intdigest()  # Trả về giá trị số nguyên của mã băm
+
 
 
 def parse_nodes(json_string, node_map):
-    """Parse a CamFlow JSON string that may contain nodes ("activity" or "entity").
-    Parsed nodes populate @node_map, which is a dictionary that maps the node's UID,
-    which is assigned by CamFlow to uniquely identify a node object, to a hashed
-    value (in str) which represents the 'type' of the node. """
+    """
+    Phân tích chuỗi JSON CamFlow để trích xuất các node dạng 'activity' và 'entity'.
+    @param json_string: Một chuỗi JSON CamFlow chứa thông tin về các node.
+    @param node_map: Một dict ánh xạ UID của node sang kiểu của node đó (ví dụ: 'file', 'task'...).
+    """
     json_object = None
     try:
-        # use "ignore" if non-decodeable exists in the @json_string
+        # Giải mã JSON, bỏ qua lỗi nếu gặp ký tự không thể decode
         json_object = json.loads(json_string)
     except Exception as e:
-        print("Exception ({}) occurred when parsing a node in JSON:".format(e))
+        print("Lỗi khi parse JSON ({}):".format(e))
         print(json_string)
         exit(1)
+
+    # Kiểm tra và phân tích các node "activity"
     if "activity" in json_object:
         activity = json_object["activity"]
         for uid in activity:
-            if not uid in node_map:  # only parse unseen nodes
+            if uid not in node_map:  # Chỉ xử lý nếu node chưa từng thấy
                 if "prov:type" not in activity[uid]:
-                    # a node must have a type.
-                    # record this issue if logging is turned on
+                    # Nếu thiếu kiểu node, ghi log nếu ở chế độ verbose
                     if CONSOLE_ARGUMENTS.verbose:
-                        logging.debug("skipping a problematic activity node with no 'prov:type': {}".format(uid))
+                        logging.debug(f"Bỏ qua node activity không có 'prov:type': {uid}")
                 else:
                     node_map[uid] = activity[uid]["prov:type"]
 
+    # Kiểm tra và phân tích các node "entity"
     if "entity" in json_object:
         entity = json_object["entity"]
         for uid in entity:
-            if not uid in node_map:
+            if uid not in node_map:
                 if "prov:type" not in entity[uid]:
                     if CONSOLE_ARGUMENTS.verbose:
-                        logging.debug("skipping a problematic entity node with no 'prov:type': {}".format(uid))
+                        logging.debug(f"Bỏ qua node entity không có 'prov:type': {uid}")
                 else:
                     node_map[uid] = entity[uid]["prov:type"]
 
 
+
 def parse_all_nodes(filename, node_map):
-    """Parse all nodes in CamFlow data. @filename is the file path of
-    the CamFlow data to parse. @node_map contains the mappings of all
-    CamFlow nodes to their hashed attributes. """
-    description = '\x1b[6;30;42m[STATUS]\x1b[0m Parsing nodes in CamFlow data from {}'.format(filename)
-    pb = tqdm(desc=description, mininterval=1.0, unit=" recs")
+    """
+    Phân tích toàn bộ các node trong một file dữ liệu CamFlow.
+    @param filename: Đường dẫn tới file JSON CamFlow.
+    @param node_map: Dict lưu ánh xạ từ UID node sang kiểu node (được cập nhật trong quá trình xử lý).
+    """
+    description = '\x1b[6;30;42m[STATUS]\x1b[0m Đang phân tích các node từ file {}'.format(filename)
+    pb = tqdm(desc=description, mininterval=1.0, unit=" dòng")  # Hiển thị tiến trình bằng tqdm
+
     with open(filename, 'r') as f:
-        # each line in CamFlow data could contain multiple
-        # provenance nodes, we call @parse_nodes routine.
         for line in f:
-            pb.update()  # for progress tracking
-            parse_nodes(line, node_map)
-    f.close()
+            pb.update()  # Cập nhật tiến trình
+            parse_nodes(line, node_map)  # Gọi hàm xử lý từng dòng
     pb.close()
+
 
 
 def parse_all_edges(inputfile, outputfile, node_map, noencode):
@@ -88,21 +99,45 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
         <source_node_id> \t <destination_node_id> \t <hashed_source_type>:<hashed_destination_type>:<hashed_edge_type>:<edge_logical_timestamp>
     If -s is set, each line would look like:
         <source_node_id> \t <destination_node_id> \t <hashed_source_type>:<hashed_destination_type>:<hashed_edge_type>:<edge_logical_timestamp>:<timestamp_stats>"""
-    total_edges = 0
-    smallest_timestamp = None
+    """
+    Hàm này dùng để phân tích toàn bộ các cạnh (edge) từ file dữ liệu CamFlow đầu vào `inputfile`,
+    và xuất ra danh sách cạnh đã xử lý vào file `outputfile`.
+
+    Trước khi gọi hàm này, hàm `parse_all_nodes()` phải được gọi để điền thông tin vào `node_map`
+    – đây là ánh xạ giữa UUID gốc của các node và ID số nguyên tương ứng.
+
+    Nếu `noencode` được bật (True), UUID sẽ được giữ nguyên; ngược lại, chúng sẽ được băm (hash) sang số nguyên.
+
+    Kết quả đầu ra có định dạng:
+        <ID nguồn> \t <ID đích> \t <kiểu nguồn>:<kiểu đích>:<kiểu cạnh>:<timestamp logic>
+    Nếu bật thêm `-s` (thống kê), dòng kết quả sẽ có thêm timestamp điều chỉnh:
+        <ID nguồn> \t <ID đích> \t <kiểu nguồn>:<kiểu đích>:<kiểu cạnh>:<timestamp logic>:<timestamp stats>
+
+    Hàm trả về tổng số cạnh hợp lệ đã được phân tích.
+    """
+    total_edges = 0 # Biến đếm số cạnh hợp lệ
+    smallest_timestamp = None  # Biến lưu timestamp nhỏ nhất (phục vụ việc tính adjusted_ts)
     # scan through the entire file to find the smallest timestamp from all the edges.
     # this step is only needed if we need to add some statistical information.
     if CONSOLE_ARGUMENTS.stats:
+    # Hiển thị trạng thái khi bắt đầu quét edges từ file dữ liệu CamFlow
         description = '\x1b[6;30;42m[STATUS]\x1b[0m Scanning edges in CamFlow data from {}'.format(inputfile)
+        
+        # Tạo progress bar để hiển thị tiến độ xử lý file
         pb = tqdm(desc=description, mininterval=1.0, unit=" recs")
+        
+        # Mở file đầu vào dưới dạng chỉ đọc
         with open(inputfile, 'r') as f:
+            # Duyệt từng dòng trong file
             for line in f:
-                pb.update()
-                json_object = json.loads(line)
+                pb.update()  # Cập nhật tiến độ mỗi lần đọc 1 dòng
+                json_object = json.loads(line)  # Phân tích dòng JSON
 
+                # Xử lý tập cạnh "used"
                 if "used" in json_object:
                     used = json_object["used"]
                     for uid in used:
+                        # Kiểm tra các trường cần thiết, nếu thiếu thì bỏ qua
                         if "prov:type" not in used[uid]:
                             continue
                         if "cf:date" not in used[uid]:
@@ -111,17 +146,24 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                             continue
                         if "prov:activity" not in used[uid]:
                             continue
+
+                        # Lấy UUID của node nguồn và đích
                         srcUUID = used[uid]["prov:entity"]
                         dstUUID = used[uid]["prov:activity"]
+
+                        # Kiểm tra UUID có tồn tại trong node_map hay không
                         if srcUUID not in node_map:
                             continue
                         if dstUUID not in node_map:
                             continue
+
+                        # Phân tích timestamp và cập nhật smallest_timestamp nếu cần
                         timestamp_str = used[uid]["cf:date"]
                         ts = time.mktime(datetime.datetime.strptime(timestamp_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                         if smallest_timestamp == None or ts < smallest_timestamp:
                             smallest_timestamp = ts
 
+                # Xử lý tập cạnh "wasGeneratedBy"
                 if "wasGeneratedBy" in json_object:
                     wasGeneratedBy = json_object["wasGeneratedBy"]
                     for uid in wasGeneratedBy:
@@ -133,17 +175,21 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                             continue
                         if "prov:activity" not in wasGeneratedBy[uid]:
                             continue
+
                         srcUUID = wasGeneratedBy[uid]["prov:activity"]
                         dstUUID = wasGeneratedBy[uid]["prov:entity"]
+
                         if srcUUID not in node_map:
                             continue
                         if dstUUID not in node_map:
                             continue
+
                         timestamp_str = wasGeneratedBy[uid]["cf:date"]
                         ts = time.mktime(datetime.datetime.strptime(timestamp_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                         if smallest_timestamp == None or ts < smallest_timestamp:
                             smallest_timestamp = ts
 
+                # Xử lý tập cạnh "wasInformedBy"
                 if "wasInformedBy" in json_object:
                     wasInformedBy = json_object["wasInformedBy"]
                     for uid in wasInformedBy:
@@ -155,17 +201,21 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                             continue
                         if "prov:informed" not in wasInformedBy[uid]:
                             continue
+
                         srcUUID = wasInformedBy[uid]["prov:informant"]
                         dstUUID = wasInformedBy[uid]["prov:informed"]
+
                         if srcUUID not in node_map:
                             continue
                         if dstUUID not in node_map:
                             continue
+
                         timestamp_str = wasInformedBy[uid]["cf:date"]
                         ts = time.mktime(datetime.datetime.strptime(timestamp_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                         if smallest_timestamp == None or ts < smallest_timestamp:
                             smallest_timestamp = ts
 
+                # Xử lý tập cạnh "wasDerivedFrom"
                 if "wasDerivedFrom" in json_object:
                     wasDerivedFrom = json_object["wasDerivedFrom"]
                     for uid in wasDerivedFrom:
@@ -177,17 +227,21 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                             continue
                         if "prov:generatedEntity" not in wasDerivedFrom[uid]:
                             continue
+
                         srcUUID = wasDerivedFrom[uid]["prov:usedEntity"]
                         dstUUID = wasDerivedFrom[uid]["prov:generatedEntity"]
+
                         if srcUUID not in node_map:
                             continue
                         if dstUUID not in node_map:
                             continue
+
                         timestamp_str = wasDerivedFrom[uid]["cf:date"]
                         ts = time.mktime(datetime.datetime.strptime(timestamp_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                         if smallest_timestamp == None or ts < smallest_timestamp:
                             smallest_timestamp = ts
 
+                # Xử lý tập cạnh "wasAssociatedWith"
                 if "wasAssociatedWith" in json_object:
                     wasAssociatedWith = json_object["wasAssociatedWith"]
                     for uid in wasAssociatedWith:
@@ -199,188 +253,237 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                             continue
                         if "prov:activity" not in wasAssociatedWith[uid]:
                             continue
+
                         srcUUID = wasAssociatedWith[uid]["prov:agent"]
                         dstUUID = wasAssociatedWith[uid]["prov:activity"]
+
                         if srcUUID not in node_map:
                             continue
                         if dstUUID not in node_map:
                             continue
+
                         timestamp_str = wasAssociatedWith[uid]["cf:date"]
                         ts = time.mktime(datetime.datetime.strptime(timestamp_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                         if smallest_timestamp == None or ts < smallest_timestamp:
                             smallest_timestamp = ts
+
+        # Đóng file sau khi đọc xong
         f.close()
+
+        # Đóng progress bar
         pb.close()
 
-    # we will go through the CamFlow data (again) and output edgelist to a file
+
+    # Duyệt lại dữ liệu CamFlow một lần nữa để xuất danh sách cạnh (edgelist) ra file
     output = open(outputfile, "w+")
+
+    # Hiển thị trạng thái khi bắt đầu phân tích cạnh từ file CamFlow
     description = '\x1b[6;30;42m[STATUS]\x1b[0m Parsing edges in CamFlow data from {}'.format(inputfile)
-    pb = tqdm(desc=description, mininterval=1.0, unit=" recs")
+    pb = tqdm(desc=description, mininterval=1.0, unit=" recs")  # Tạo thanh tiến trình để theo dõi tiến độ
+
+    # Mở file JSON đầu vào
     with open(inputfile, 'r') as f:
         for line in f:
-            pb.update()
+            pb.update()  # Cập nhật thanh tiến trình mỗi dòng
+
+            # Phân tích một dòng JSON thành đối tượng Python
             json_object = json.loads(line)
 
+            # Kiểm tra xem dòng này có chứa tập cạnh "used" hay không
             if "used" in json_object:
                 used = json_object["used"]
+
+                # Duyệt qua từng cạnh trong tập "used"
                 for uid in used:
+                    # Kiểm tra xem edge có trường "prov:type" không, nếu không thì bỏ qua cạnh này
                     if "prov:type" not in used[uid]:
-                        # an edge must have a type; if not,
-                        # we will have to skip the edge. Log
-                        # this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (used) record without type: {}".format(uid))
                         continue
                     else:
                         edgetype = "used"
-                    # cf:id is used as logical timestamp to order edges
+
+                    # Kiểm tra trường "cf:id" dùng làm mốc thời gian logic
                     if "cf:id" not in used[uid]:
-                        # an edge must have a logical timestamp;
-                        # if not we will have to skip the edge.
-                        # Log this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (used) record without logical timestamp: {}".format(uid))
                         continue
                     else:
                         timestamp = used[uid]["cf:id"]
+
+                    # Kiểm tra trường "prov:entity" (nút nguồn của cạnh)
                     if "prov:entity" not in used[uid]:
-                        # an edge's source node must exist;
-                        # if not, we will have to skip the
-                        # edge. Log this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug(
                                 "edge (used/{}) record without source UUID: {}".format(used[uid]["prov:type"], uid))
                         continue
+
+                    # Kiểm tra trường "prov:activity" (nút đích của cạnh)
                     if "prov:activity" not in used[uid]:
-                        # an edge's destination node must exist;
-                        # if not, we will have to skip the edge.
-                        # Log this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug(
-                                "edge (used/{}) record without destination UUID: {}".format(used[uid]["prov:type"],
-                                                                                            uid))
+                                "edge (used/{}) record without destination UUID: {}".format(used[uid]["prov:type"], uid))
                         continue
+
+                    # Lấy UUID của nút nguồn và nút đích
                     srcUUID = used[uid]["prov:entity"]
                     dstUUID = used[uid]["prov:activity"]
-                    # both source and destination node must
-                    # exist in @node_map; if not, we will
-                    # have to skip the edge. Log this issue
-                    # if verbose is set.
+
+                    # Kiểm tra xem các UUID này có tồn tại trong node_map không
                     if srcUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug(
                                 "edge (used/{}) record with an unseen srcUUID: {}".format(used[uid]["prov:type"], uid))
                         continue
                     else:
-                        srcVal = node_map[srcUUID]
+                        srcVal = node_map[srcUUID]  # Lấy giá trị đã mã hóa/định danh của node nguồn
+
                     if dstUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug(
                                 "edge (used/{}) record with an unseen dstUUID: {}".format(used[uid]["prov:type"], uid))
                         continue
                     else:
-                        dstVal = node_map[dstUUID]
+                        dstVal = node_map[dstUUID]  # Lấy giá trị đã mã hóa/định danh của node đích
+
+                    # Kiểm tra và xử lý timestamp thực (cf:date)
                     if "cf:date" not in used[uid]:
-                        # an edge must have a timestamp; if
-                        # not, we will have to skip the edge.
-                        # Log this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (used) record without timestamp: {}".format(uid))
                         continue
                     else:
-                        # we only record @adjusted_ts if we need
-                        # to record stats of CamFlow dataset.
+                        # Nếu bật chế độ thống kê, tính timestamp đã điều chỉnh
                         if CONSOLE_ARGUMENTS.stats:
                             ts_str = used[uid]["cf:date"]
                             ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                             adjusted_ts = ts - smallest_timestamp
+
+                    # Kiểm tra trường jiffies (đơn vị thời gian nội bộ của hệ thống)
                     if "cf:jiffies" not in used[uid]:
-                        # an edge must have a jiffies timestamp; if
-                        # not, we will have to skip the edge.
-                        # Log this issue if verbose is set.
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (used) record without jiffies: {}".format(uid))
                         continue
                     else:
-                        # we only record @jiffies if
-                        # the option is set
                         if CONSOLE_ARGUMENTS.jiffies:
                             jiffies = used[uid]["cf:jiffies"]
-                    total_edges += 1
-                    if noencode:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp))
-                    else:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp))
 
+                    # Đếm tổng số cạnh đã xử lý
+                    total_edges += 1
+
+                    # Ghi thông tin cạnh ra file đầu ra theo từng chế độ
+                    if noencode:
+                        # Ghi thô UUID không mã hóa
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+                    else:
+                        # Ghi UUID đã mã hóa (dùng hash)
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+
+
+            # Kiểm tra xem dòng dữ liệu có chứa cạnh "wasGeneratedBy" hay không
             if "wasGeneratedBy" in json_object:
                 wasGeneratedBy = json_object["wasGeneratedBy"]
+
+                # Duyệt qua từng cạnh trong tập "wasGeneratedBy"
                 for uid in wasGeneratedBy:
+                    # Kiểm tra xem cạnh có trường "prov:type" không, nếu không thì bỏ qua
                     if "prov:type" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy) record without type: {}".format(uid))
                         continue
                     else:
-                        edgetype = "wasGeneratedBy"
+                        edgetype = "wasGeneratedBy"  # Đặt kiểu cạnh là "wasGeneratedBy"
+
+                    # Kiểm tra trường "cf:id" (timestamp logic của cạnh)
                     if "cf:id" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy) record without logical timestamp: {}".format(uid))
                         continue
                     else:
-                        timestamp = wasGeneratedBy[uid]["cf:id"]
+                        timestamp = wasGeneratedBy[uid]["cf:id"]  # Lấy timestamp logic
+
+                    # Kiểm tra trường "prov:entity" (nút đích của cạnh)
                     if "prov:entity" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy/{}) record without source UUID: {}".format(
                                 wasGeneratedBy[uid]["prov:type"], uid))
                         continue
+
+                    # Kiểm tra trường "prov:activity" (nút nguồn của cạnh)
                     if "prov:activity" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy/{}) record without destination UUID: {}".format(
                                 wasGeneratedBy[uid]["prov:type"], uid))
                         continue
+
+                    # Lấy UUID của nút nguồn và nút đích
                     srcUUID = wasGeneratedBy[uid]["prov:activity"]
                     dstUUID = wasGeneratedBy[uid]["prov:entity"]
+
+                    # Kiểm tra xem UUID nguồn (srcUUID) có tồn tại trong node_map không
                     if srcUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy/{}) record with an unseen srcUUID: {}".format(
                                 wasGeneratedBy[uid]["prov:type"], uid))
                         continue
                     else:
-                        srcVal = node_map[srcUUID]
+                        srcVal = node_map[srcUUID]  # Lấy giá trị đã mã hóa của nút nguồn
+
+                    # Kiểm tra xem UUID đích (dstUUID) có tồn tại trong node_map không
                     if dstUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
-                            logging.debug("edge (wasGeneratedBy/{}) record with an unsen dstUUID: {}".format(
+                            logging.debug("edge (wasGeneratedBy/{}) record with an unseen dstUUID: {}".format(
                                 wasGeneratedBy[uid]["prov:type"], uid))
                         continue
                     else:
-                        dstVal = node_map[dstUUID]
+                        dstVal = node_map[dstUUID]  # Lấy giá trị đã mã hóa của nút đích
+
+                    # Kiểm tra trường "cf:date" (timestamp thực)
                     if "cf:date" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy) record without timestamp: {}".format(uid))
                         continue
                     else:
+                        # Nếu bật chế độ thống kê, tính timestamp đã điều chỉnh
                         if CONSOLE_ARGUMENTS.stats:
                             ts_str = wasGeneratedBy[uid]["cf:date"]
                             ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                             adjusted_ts = ts - smallest_timestamp
+
+                    # Kiểm tra trường "cf:jiffies" (đơn vị thời gian của hệ thống)
                     if "cf:jiffies" not in wasGeneratedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasGeneratedBy) record without jiffies: {}".format(uid))
@@ -388,85 +491,112 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                     else:
                         if CONSOLE_ARGUMENTS.jiffies:
                             jiffies = wasGeneratedBy[uid]["cf:jiffies"]
-                    total_edges += 1
-                    if noencode:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp))
-                    else:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal,
-                                                               edgetype, timestamp))
 
+                    # Đếm tổng số cạnh đã xử lý
+                    total_edges += 1
+
+                    # Ghi cạnh vào file đầu ra tùy theo các chế độ khác nhau
+                    if noencode:
+                        # Ghi UUID thô nếu không sử dụng mã hóa
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts)
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, jiffies)
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp)
+                            )
+                    else:
+                        # Ghi UUID đã mã hóa nếu bật chế độ mã hóa
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, adjusted_ts)
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, jiffies)
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp)
+                            )
+
+
+            # Kiểm tra xem dữ liệu có chứa cạnh "wasInformedBy" không
             if "wasInformedBy" in json_object:
                 wasInformedBy = json_object["wasInformedBy"]
+
+                # Duyệt qua từng cạnh trong tập "wasInformedBy"
                 for uid in wasInformedBy:
+                    # Kiểm tra xem cạnh có trường "prov:type" không, nếu không có thì bỏ qua
                     if "prov:type" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy) record without type: {}".format(uid))
                         continue
                     else:
-                        edgetype = "wasInformedBy"
+                        edgetype = "wasInformedBy"  # Đặt kiểu cạnh là "wasInformedBy"
+
+                    # Kiểm tra trường "cf:id" (timestamp logic của cạnh)
                     if "cf:id" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy) record without logical timestamp: {}".format(uid))
                         continue
                     else:
-                        timestamp = wasInformedBy[uid]["cf:id"]
+                        timestamp = wasInformedBy[uid]["cf:id"]  # Lấy timestamp logic
+
+                    # Kiểm tra trường "prov:informant" (nút nguồn của cạnh)
                     if "prov:informant" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy/{}) record without source UUID: {}".format(
                                 wasInformedBy[uid]["prov:type"], uid))
                         continue
+
+                    # Kiểm tra trường "prov:informed" (nút đích của cạnh)
                     if "prov:informed" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy/{}) record without destination UUID: {}".format(
                                 wasInformedBy[uid]["prov:type"], uid))
                         continue
+
+                    # Lấy UUID của nút nguồn và nút đích
                     srcUUID = wasInformedBy[uid]["prov:informant"]
                     dstUUID = wasInformedBy[uid]["prov:informed"]
+
+                    # Kiểm tra xem UUID nguồn (srcUUID) có tồn tại trong node_map không
                     if srcUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy/{}) record with an unseen srcUUID: {}".format(
                                 wasInformedBy[uid]["prov:type"], uid))
                         continue
                     else:
-                        srcVal = node_map[srcUUID]
+                        srcVal = node_map[srcUUID]  # Lấy giá trị đã mã hóa của nút nguồn
+
+                    # Kiểm tra xem UUID đích (dstUUID) có tồn tại trong node_map không
                     if dstUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy/{}) record with an unseen dstUUID: {}".format(
                                 wasInformedBy[uid]["prov:type"], uid))
                         continue
                     else:
-                        dstVal = node_map[dstUUID]
+                        dstVal = node_map[dstUUID]  # Lấy giá trị đã mã hóa của nút đích
+
+                    # Kiểm tra trường "cf:date" (timestamp thực)
                     if "cf:date" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy) record without timestamp: {}".format(uid))
                         continue
                     else:
+                        # Nếu bật chế độ thống kê, tính timestamp đã điều chỉnh
                         if CONSOLE_ARGUMENTS.stats:
                             ts_str = wasInformedBy[uid]["cf:date"]
                             ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                             adjusted_ts = ts - smallest_timestamp
+
+                    # Kiểm tra trường "cf:jiffies" (đơn vị thời gian của hệ thống)
                     if "cf:jiffies" not in wasInformedBy[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasInformedBy) record without jiffies: {}".format(uid))
@@ -474,85 +604,114 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                     else:
                         if CONSOLE_ARGUMENTS.jiffies:
                             jiffies = wasInformedBy[uid]["cf:jiffies"]
-                    total_edges += 1
-                    if noencode:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp))
-                    else:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal,
-                                                               edgetype, timestamp))
 
+                    # Đếm tổng số cạnh đã xử lý
+                    total_edges += 1
+
+                    # Ghi cạnh vào file đầu ra tùy theo các chế độ khác nhau
+                    if noencode:
+                        # Ghi UUID thô nếu không sử dụng mã hóa
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts)
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, jiffies)
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp)
+                            )
+                    else:
+                        # Ghi UUID đã mã hóa nếu bật chế độ mã hóa
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, adjusted_ts)
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, jiffies)
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp)
+                            )
+
+
+            # Kiểm tra xem trong json_object có chứa trường "wasDerivedFrom" hay không
             if "wasDerivedFrom" in json_object:
-                wasDerivedFrom = json_object["wasDerivedFrom"]
+                wasDerivedFrom = json_object["wasDerivedFrom"]  # Lấy dữ liệu tương ứng với key "wasDerivedFrom"
+                
+                # Duyệt qua từng phần tử trong danh sách "wasDerivedFrom"
                 for uid in wasDerivedFrom:
+                    
+                    # Kiểm tra xem trường "prov:type" có tồn tại không
                     if "prov:type" not in wasDerivedFrom[uid]:
+                        # Nếu bật chế độ verbose thì log cảnh báo
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom) record without type: {}".format(uid))
-                        continue
+                        continue  # Bỏ qua bản ghi nếu thiếu "prov:type"
                     else:
-                        edgetype = "wasDerivedFrom"
+                        edgetype = "wasDerivedFrom"  # Gán kiểu cạnh (edge) là "wasDerivedFrom"
+                    
+                    # Kiểm tra xem có "cf:id" (logical timestamp) hay không
                     if "cf:id" not in wasDerivedFrom[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom) record without logical timestamp: {}".format(uid))
-                            continue
+                        continue
                     else:
-                        timestamp = wasDerivedFrom[uid]["cf:id"]
+                        timestamp = wasDerivedFrom[uid]["cf:id"]  # Lưu giá trị timestamp
+                    
+                    # Kiểm tra có trường "prov:usedEntity" (UUID nguồn) không
                     if "prov:usedEntity" not in wasDerivedFrom[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom/{}) record without source UUID: {}".format(
                                 wasDerivedFrom[uid]["prov:type"], uid))
                         continue
+                    
+                    # Kiểm tra có trường "prov:generatedEntity" (UUID đích) không
                     if "prov:generatedEntity" not in wasDerivedFrom[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom/{}) record without destination UUID: {}".format(
                                 wasDerivedFrom[uid]["prov:type"], uid))
                         continue
+                    
+                    # Lấy UUID của nguồn và đích từ bản ghi
                     srcUUID = wasDerivedFrom[uid]["prov:usedEntity"]
                     dstUUID = wasDerivedFrom[uid]["prov:generatedEntity"]
+                    
+                    # Kiểm tra srcUUID có tồn tại trong node_map hay không
                     if srcUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom/{}) record with an unseen srcUUID: {}".format(
                                 wasDerivedFrom[uid]["prov:type"], uid))
                         continue
                     else:
-                        srcVal = node_map[srcUUID]
+                        srcVal = node_map[srcUUID]  # Lấy giá trị node tương ứng
+                    
+                    # Kiểm tra dstUUID có tồn tại trong node_map hay không
                     if dstUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom/{}) record with an unseen dstUUID: {}".format(
                                 wasDerivedFrom[uid]["prov:type"], uid))
                         continue
                     else:
-                        dstVal = node_map[dstUUID]
+                        dstVal = node_map[dstUUID]  # Lấy giá trị node tương ứng
+                    
+                    # Kiểm tra trường "cf:date" để lấy timestamp thật sự
                     if "cf:date" not in wasDerivedFrom[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom) record without timestamp: {}".format(uid))
                         continue
                     else:
                         if CONSOLE_ARGUMENTS.stats:
+                            # Chuyển chuỗi timestamp thành số giây, rồi điều chỉnh theo mốc thời gian nhỏ nhất
                             ts_str = wasDerivedFrom[uid]["cf:date"]
                             ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())
                             adjusted_ts = ts - smallest_timestamp
+                    
+                    # Kiểm tra trường "cf:jiffies" để lấy giá trị jiffies nếu cần
                     if "cf:jiffies" not in wasDerivedFrom[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasDerivedFrom) record without jiffies: {}".format(uid))
@@ -560,85 +719,122 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                     else:
                         if CONSOLE_ARGUMENTS.jiffies:
                             jiffies = wasDerivedFrom[uid]["cf:jiffies"]
+                    
+                    # Tăng biến đếm số lượng cạnh đã xử lý
                     total_edges += 1
-                    if noencode:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp))
-                    else:
-                        if CONSOLE_ARGUMENTS.stats:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
-                        elif CONSOLE_ARGUMENTS.jiffies:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  jiffies))
-                        else:
-                            output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal,
-                                                               edgetype, timestamp))
 
+                    # Ghi thông tin cạnh ra tệp output
+                    if noencode:  # Nếu không cần mã hóa UUID
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+                    else:  # Nếu cần mã hóa UUID bằng hàm hashgen
+                        if CONSOLE_ARGUMENTS.stats:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
+                        elif CONSOLE_ARGUMENTS.jiffies:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
+                        else:
+                            output.write(
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+
+
+            # Kiểm tra xem trong json_object có chứa trường "wasAssociatedWith" hay không
             if "wasAssociatedWith" in json_object:
-                wasAssociatedWith = json_object["wasAssociatedWith"]
+                wasAssociatedWith = json_object["wasAssociatedWith"]  # Lấy toàn bộ dữ liệu của "wasAssociatedWith"
+                
+                # Duyệt qua từng phần tử (mỗi edge) trong danh sách
                 for uid in wasAssociatedWith:
+                    
+                    # Kiểm tra xem bản ghi có chứa kiểu edge không
                     if "prov:type" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith) record without type: {}".format(uid))
-                        continue
+                        continue  # Bỏ qua nếu không có kiểu
                     else:
-                        edgetype = "wasAssociatedWith"
+                        edgetype = "wasAssociatedWith"  # Gán kiểu edge
+                    
+                    # Kiểm tra xem có chứa ID logic (cf:id) không
                     if "cf:id" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith) record without logical timestamp: {}".format(uid))
                         continue
                     else:
-                        timestamp = wasAssociatedWith[uid]["cf:id"]
+                        timestamp = wasAssociatedWith[uid]["cf:id"]  # Lưu lại ID logic
+                    
+                    # Kiểm tra xem có UUID nguồn (agent) không
                     if "prov:agent" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith/{}) record without source UUID: {}".format(
                                 wasAssociatedWith[uid]["prov:type"], uid))
                         continue
+                    
+                    # Kiểm tra xem có UUID đích (activity) không
                     if "prov:activity" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith/{}) record without destination UUID: {}".format(
                                 wasAssociatedWith[uid]["prov:type"], uid))
                         continue
+                    
+                    # Lấy UUID nguồn và đích
                     srcUUID = wasAssociatedWith[uid]["prov:agent"]
                     dstUUID = wasAssociatedWith[uid]["prov:activity"]
+                    
+                    # Kiểm tra UUID nguồn có tồn tại trong node_map không
                     if srcUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith/{}) record with an unseen srcUUID: {}".format(
                                 wasAssociatedWith[uid]["prov:type"], uid))
                         continue
                     else:
-                        srcVal = node_map[srcUUID]
+                        srcVal = node_map[srcUUID]  # Lấy thông tin node nguồn
+                    
+                    # Kiểm tra UUID đích có tồn tại trong node_map không
                     if dstUUID not in node_map:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith/{}) record with an unseen dstUUID: {}".format(
                                 wasAssociatedWith[uid]["prov:type"], uid))
                         continue
                     else:
-                        dstVal = node_map[dstUUID]
+                        dstVal = node_map[dstUUID]  # Lấy thông tin node đích
+                    
+                    # Kiểm tra có trường cf:date để lấy timestamp thực sự
                     if "cf:date" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith) record without timestamp: {}".format(uid))
                         continue
                     else:
                         if CONSOLE_ARGUMENTS.stats:
-                            ts_str = wasAssociatedWith[uid]["cf:date"]
-                            ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())
-                            adjusted_ts = ts - smallest_timestamp
+                            ts_str = wasAssociatedWith[uid]["cf:date"]  # Lấy chuỗi thời gian
+                            ts = time.mktime(datetime.datetime.strptime(ts_str, "%Y:%m:%dT%H:%M:%S").timetuple())  # Đổi thành giây
+                            adjusted_ts = ts - smallest_timestamp  # Điều chỉnh theo mốc nhỏ nhất
+                    
+                    # Kiểm tra nếu cần lấy jiffies (đơn vị thời gian nhỏ của hệ thống)
                     if "cf:jiffies" not in wasAssociatedWith[uid]:
                         if CONSOLE_ARGUMENTS.verbose:
                             logging.debug("edge (wasAssociatedWith) record without jiffies: {}".format(uid))
@@ -646,181 +842,269 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
                     else:
                         if CONSOLE_ARGUMENTS.jiffies:
                             jiffies = wasAssociatedWith[uid]["cf:jiffies"]
+                    
+                    # Tăng tổng số lượng cạnh đã xử lý
                     total_edges += 1
-                    if noencode:
+
+                    # Ghi thông tin edge ra file output
+                    if noencode:  # Nếu không mã hóa UUID
                         if CONSOLE_ARGUMENTS.stats:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
                         elif CONSOLE_ARGUMENTS.jiffies:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp,
-                                                                  jiffies))
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
                         else:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp))
-                    else:
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    srcUUID, dstUUID, srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+                    else:  # Nếu có mã hóa UUID bằng hàm hashgen
                         if CONSOLE_ARGUMENTS.stats:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  adjusted_ts))
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, adjusted_ts
+                                )
+                            )
                         elif CONSOLE_ARGUMENTS.jiffies:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal,
-                                                                  dstVal, edgetype, timestamp,
-                                                                  jiffies))
+                                "{}\t{}\t{}:{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp, jiffies
+                                )
+                            )
                         else:
                             output.write(
-                                "{}\t{}\t{}:{}:{}:{}\n".format(hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal,
-                                                               edgetype, timestamp))
+                                "{}\t{}\t{}:{}:{}:{}\n".format(
+                                    hashgen([srcUUID]), hashgen([dstUUID]), srcVal, dstVal, edgetype, timestamp
+                                )
+                            )
+    # Đóng các file và progress bar sau khi xử lý xong
     f.close()
     output.close()
     pb.close()
+    # Trả về tổng số edge đã xử lý
     return total_edges
 
+
 def read_single_graph(file_name, threshold):
-    graph = []
-    edge_cnt = 0
+    graph = []         # Danh sách chứa các cạnh của đồ thị
+    edge_cnt = 0       # Bộ đếm số lượng cạnh đã đọc
+
+    # Mở file chứa danh sách cạnh
     with open(file_name, 'r') as f:
         for line in f:
             try:
+                # Tách dòng thành các phần tử theo tab
                 edge = line.strip().split("\t")
-                new_edge = [edge[0], edge[1]]
-                attributes = edge[2].strip().split(":")
-                source_node_type = attributes[0]
-                destination_node_type = attributes[1]
-                edge_type = attributes[2]
-                edge_order = attributes[3]
+                new_edge = [edge[0], edge[1]]  # Lấy ID node nguồn và node đích
 
+                # Phân tích chuỗi thuộc tính: dạng "type_src:type_dst:type_edge:order"
+                attributes = edge[2].strip().split(":")
+                source_node_type = attributes[0]        # Loại node nguồn
+                destination_node_type = attributes[1]   # Loại node đích
+                edge_type = attributes[2]               # Loại cạnh
+                edge_order = attributes[3]              # Thứ tự cạnh (để sắp xếp)
+
+                # Gộp tất cả thông tin vào danh sách cạnh
                 new_edge.append(source_node_type)
                 new_edge.append(destination_node_type)
                 new_edge.append(edge_type)
                 new_edge.append(edge_order)
+
+                # Thêm cạnh vào danh sách
                 graph.append(new_edge)
                 edge_cnt += 1
+
             except:
+                # Nếu có lỗi khi xử lý dòng, in dòng lỗi để kiểm tra
                 print("{}".format(line))
-    f.close()
+
+    # Sắp xếp danh sách cạnh theo thứ tự `edge_order`
     graph.sort(key=lambda e: e[5])
+
+    # Trả về danh sách cạnh nếu số lượng nhỏ hơn ngưỡng
     if len(graph) <= threshold:
         return graph
     else:
-        return graph[:threshold]
+        return graph[:threshold]  # Cắt bớt nếu vượt ngưỡng
 
 
 def process_graph(name, threshold):
+    # Đọc đồ thị từ file tên `name`, chỉ lấy các cạnh dưới ngưỡng `threshold`
     graph = read_single_graph(name, threshold)
-    result_graph = nx.DiGraph()
-    cnt = 0
+    result_graph = nx.DiGraph()  # Tạo đồ thị có hướng mới
+    cnt = 0                      # Biến đếm số cạnh hợp lệ đã thêm
+
+    # Duyệt từng cạnh trong đồ thị ban đầu
     for num, edge in enumerate(graph):
         cnt += 1
-        src, dst, src_type, dst_type, edge_type = edge[:5]
+        src, dst, src_type, dst_type, edge_type = edge[:5]  # Lấy thông tin cạnh
+
+        # Chỉ xử lý nếu loại node nguồn và đích đều hợp lệ
         if src_type in valid_node_type and dst_type in valid_node_type:
+            # Thêm node nguồn nếu chưa có
             if not result_graph.has_node(src):
                 result_graph.add_node(src, type=src_type)
+            # Thêm node đích nếu chưa có
             if not result_graph.has_node(dst):
                 result_graph.add_node(dst, type=dst_type)
+            # Thêm cạnh nếu chưa có giữa hai node
             if not result_graph.has_edge(src, dst):
                 result_graph.add_edge(src, dst, type=edge_type)
+                # Nếu có tùy chọn tạo cạnh hai chiều, thêm cả cạnh ngược
                 if bidirection:
                     result_graph.add_edge(dst, src, type='reverse_{}'.format(edge_type))
-    return cnt, result_graph
+
+    return cnt, result_graph  # Trả về số cạnh đã xử lý và đồ thị kết quả
 
 
-node_type_list = []
-edge_type_list = []
-node_type_dict = {}
-edge_type_dict = {}
+node_type_list = []    # Danh sách các loại node duy nhất
+edge_type_list = []    # Danh sách các loại cạnh duy nhất
+node_type_dict = {}    # Từ điển đếm số lượng node theo loại
+edge_type_dict = {}    # Từ điển đếm số lượng cạnh theo loại
 
 
 def format_graph(g, name):
-    new_g = nx.DiGraph()
-    node_map = {}
-    node_cnt = 0
+    new_g = nx.DiGraph()     # Tạo đồ thị mới (định danh node bằng số nguyên)
+    node_map = {}            # Ánh xạ node cũ sang ID mới (số)
+    node_cnt = 0             # Bộ đếm node mới
+
+    # Duyệt qua tất cả node, gán ID số nguyên và giữ lại thông tin loại
     for n in g.nodes:
         node_map[n] = node_cnt
         new_g.add_node(node_cnt, type=g.nodes[n]['type'])
         node_cnt += 1
+
+    # Duyệt qua các cạnh và chuyển sang node mới (dựa theo node_map)
     for e in g.edges:
         new_g.add_edge(node_map[e[0]], node_map[e[1]], type=g.edges[e]['type'])
+
+    # Cập nhật thống kê loại node
     for n in new_g.nodes:
         node_type = new_g.nodes[n]['type']
-        if not node_type in node_type_dict:
+        if node_type not in node_type_dict:
             node_type_list.append(node_type)
             node_type_dict[node_type] = 1
         else:
             node_type_dict[node_type] += 1
+
+    # Cập nhật thống kê loại cạnh
     for e in new_g.edges:
         edge_type = new_g.edges[e]['type']
-        if not edge_type in edge_type_dict:
+        if edge_type not in edge_type_dict:
             edge_type_list.append(edge_type)
             edge_type_dict[edge_type] = 1
         else:
             edge_type_dict[edge_type] += 1
+
+    # Ánh xạ loại node sang chỉ số nguyên dựa trên vị trí trong danh sách
     for n in new_g.nodes:
         new_g.nodes[n]['type'] = node_type_list.index(new_g.nodes[n]['type'])
+
+    # Ánh xạ loại cạnh sang chỉ số nguyên dựa trên vị trí trong danh sách
     for e in new_g.edges:
         new_g.edges[e]['type'] = edge_type_list.index(new_g.edges[e]['type'])
+
+    # Ghi đồ thị ra file JSON theo định dạng node-link
     with open('{}.json'.format(name), 'w', encoding='utf-8') as f:
         json.dump(nx.node_link_data(new_g), f)
 
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Convert CamFlow JSON to Unicorn edgelist')
+    # ======================= PHẦN KHAI BÁO THAM SỐ =======================
+    parser = argparse.ArgumentParser(description='Chuyển đổi dữ liệu CamFlow JSON thành Unicorn edgelist')
     args = parser.parse_args()
-    args.stats = False
-    args.verbose = False
-    args.jiffies = False
-    args.input = '../data/wget/raw/'
-    args.output = '../data/wget/processed/'
-    args.final_output = '../data/wget/final/'
-    args.noencode = False
+
+    # Thiết lập các tham số mặc định
+    args.stats = False                # Không ghi thống kê
+    args.verbose = False              # Không ghi log chi tiết
+    args.jiffies = False              # Không dùng thời gian dạng jiffies
+    args.input = '../data/wget/raw/' # Thư mục chứa dữ liệu gốc (CamFlow JSON)
+    args.output = '../data/wget/processed/'  # Thư mục chứa dữ liệu sau khi xử lý cạnh
+    args.final_output = '../data/wget/final/'  # Thư mục chứa đồ thị cuối cùng
+    args.noencode = False            # Có mã hóa node ID hay không (mặc định: không)
+
+    # ======================= TẠO CÁC THƯ MỤC NẾU CHƯA TỒN TẠI =======================
     if not os.path.exists(args.input):
         os.mkdir(args.input)
     if not os.path.exists(args.output):
         os.mkdir(args.output)
     if not os.path.exists(args.final_output):
         os.mkdir(args.final_output)
+
+    # Gán tham số toàn cục
     CONSOLE_ARGUMENTS = args
 
+    # ======================= CẤU HÌNH LOG (nếu cần) =======================
     if args.verbose:
         logging.basicConfig(filename=args.log, level=logging.DEBUG)
-    cnt = 0
-    fname_list = []
+
+    # ======================= TIỀN XỬ LÝ DANH SÁCH FILE =======================
+    cnt = 0                # Biến đếm số file
+    fname_list = []        # Danh sách tên file
+
+    # Tạo danh sách tên file log (gồm attack và normal)
     for i in range(150):
         if i < 25:
             fname_list.append('wget-baseline-attack-' + str(i) + '.log')
         else:
             fname_list.append('wget-normal-' + str(i - 25) + '.log')
+
+    # ======================= XỬ LÝ MỖI FILE LOG =======================
     for fname in fname_list:
-        cnt += 1
-        node_map = dict()
+        cnt += 1                           # Tăng biến đếm
+        node_map = dict()                 # Tạo node_map để lưu thông tin node
+
+        # Phân tích tất cả các node trong file log
         parse_all_nodes(args.input + '/{}'.format(fname), node_map)
-        total_edges = parse_all_edges(args.input + '/{}'.format(fname), args.output + '/{}.log'.format(cnt), node_map,
-                                      args.noencode)
+
+        # Phân tích tất cả các cạnh và lưu ra file trung gian
+        total_edges = parse_all_edges(
+            args.input + '/{}'.format(fname),
+            args.output + '/{}.log'.format(cnt),
+            node_map,
+            args.noencode
+        )
+
+        # Nếu cần ghi thống kê, thì ghi số node và số cạnh ra file thống kê
         if args.stats:
             total_nodes = len(node_map)
             stats = open(args.stats_file + '/{}.log'.format(cnt), "a+")
             stats.write("{},{},{}\n".format(args.input + '/{}'.format(fname), total_nodes, total_edges))
 
-    bidirection = False
-    threshold = 10000000 # infinity
-    interaction_dict = []
-    graph_cnt = 0
-    result_graphs = []
-    input = args.output
-    base = args.final_output
+    # ======================= GIAI ĐOẠN TẠO ĐỒ THỊ =======================
+    bidirection = False              # Đồ thị không có cạnh hai chiều
+    threshold = 10000000             # Ngưỡng tối đa cho cạnh (để lọc nếu cần)
+    interaction_dict = []           # Danh sách tương tác (nếu cần dùng)
+    graph_cnt = 0                   # Đếm số đồ thị
+    result_graphs = []              # Danh sách đồ thị kết quả
 
-    line_cnt = 0
-    for i in tqdm(range(cnt)):
+    input = args.output             # Đường dẫn chứa dữ liệu cạnh đã xử lý
+    base = args.final_output        # Đường dẫn xuất file đồ thị cuối cùng
+    line_cnt = 0                    # Tổng số dòng (cạnh) đã xử lý
+
+    # ======================= XỬ LÝ VÀ ĐỊNH DẠNG ĐỒ THỊ =======================
+    for i in tqdm(range(cnt)):  # Hiển thị tiến độ xử lý
+        # Xử lý một đồ thị từ file edge
         single_cnt, result_graph = process_graph('{}{}.log'.format(input, i + 1), threshold)
+        # Định dạng lại và ghi đồ thị ra file output
         format_graph(result_graph, '{}{}'.format(base, i))
+        # Cộng dồn số dòng (cạnh) đã xử lý
         line_cnt += single_cnt
 
-    print(line_cnt // 150)
-    print(len(node_type_list))
-    print(node_type_dict)
-    print(len(edge_type_list))
-    print(edge_type_dict)
+    # ======================= IN THỐNG KÊ =======================
+    print(line_cnt // 150)          # Số cạnh trung bình trên mỗi đồ thị
+    print(len(node_type_list))      # Số lượng loại node
+    print(node_type_dict)           # Từ điển loại node
+    print(len(edge_type_list))      # Số lượng loại cạnh
+    print(edge_type_dict)           # Từ điển loại cạnh
+
 
