@@ -14,9 +14,22 @@ import numpy as np  # Nhập NumPy để thực hiện các phép toán số h�
 from tqdm import tqdm  # Nhập tqdm để tạo thanh tiến độ theo dõi quá trình huấn luyện
 from utils.loaddata import transform_graph  # Nhập hàm transform_graph từ utils để biến đổi đồ thị trước khi huấn luyện
 
-# Hàm batch_level_train: Huấn luyện mô hình trên dữ liệu đồ thị theo lô qua nhiều epoch, sử dụng bộ tối ưu hóa
-# để cập nhật trọng số, trả về mô hình đã được huấn luyện.
+
 def batch_level_train(model, graphs, train_loader, optimizer, max_epoch, device, n_dim=0, e_dim=0):
+    '''
+    Hàm huấn luyện mô hình theo từng lô trên dữ liệu đồ thị.
+    
+    :param model: Mô hình học sâu cần huấn luyện.
+    :param graphs: Tập hợp đồ thị chứa dữ liệu huấn luyện.
+    :param train_loader: Bộ tải dữ liệu để lấy các lô dữ liệu huấn luyện.
+    :param optimizer: Bộ tối ưu hóa để cập nhật trọng số mô hình.
+    :param max_epoch: Số lượng epoch tối đa để huấn luyện.
+    :param device: Thiết bị tính toán (CPU/GPU) để thực hiện huấn luyện.
+    :param n_dim: Kích thước đặc trưng của nút (mặc định là 0).
+    :param e_dim: Kích thước đặc trưng của cạnh (mặc định là 0).
+    
+    :return: Mô hình đã được huấn luyện.
+    '''
     epoch_iter = tqdm(range(max_epoch))  # Tạo thanh tiến độ cho số epoch tối đa
     for epoch in epoch_iter:  # Lặp qua từng epoch
         model.train()  # Đặt mô hình ở chế độ huấn luyện

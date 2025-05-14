@@ -12,9 +12,19 @@ như trong các mô hình học sâu liên quan đến đồ thị hoặc nhúng
 
 import torch.nn.functional as F  # Nhập mô-đun chức năng của PyTorch để sử dụng các hàm như chuẩn hóa và phép toán tensor
 
-# Hàm sce_loss: Tính toán mất mát tùy chỉnh dựa trên độ tương đồng cosine giữa hai tập hợp vector,
-# với tham số alpha để khuếch đại sự khác biệt, trả về giá trị mất mát trung bình.
+
 def sce_loss(x, y, alpha=3):
+    '''
+    Tính toán hàm mất mát SCE (Scaled Cosine Embedding Loss) giữa hai tensor x và y.
+    Hàm này sử dụng độ tương đồng cosine giữa hai tensor để tính toán mất mát,
+    sau đó nâng lũy thừa để khuếch đại sự khác biệt giữa chúng.
+    
+    :param x: Tensor đầu vào đầu tiên (thường là đặc trưng dự đoán).
+    :param y: Tensor đầu vào thứ hai (thường là đặc trưng mục tiêu).
+    :param alpha: Hệ số khuếch đại (mặc định là 3).
+    
+    :return: Giá trị mất mát SCE.
+    '''
     x = F.normalize(x, p=2, dim=-1)  # Chuẩn hóa L2 vector x theo chiều cuối cùng (dim=-1) để có độ dài đơn vị
     y = F.normalize(y, p=2, dim=-1)  # Chuẩn hóa L2 vector y theo chiều cuối cùng (dim=-1) để có độ dài đơn vị
     loss = (1 - (x * y).sum(dim=-1)).pow_(alpha)  # Tính độ tương đồng cosine, lấy 1 trừ đi, rồi nâng lũy thừa alpha

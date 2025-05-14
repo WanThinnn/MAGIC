@@ -20,11 +20,11 @@ from dgl.utils import expand_as_pair  # Nhập hàm tiện ích để xử lý k
 from utils.utils import create_activation  # Nhập hàm tiện ích tùy chỉnh để tạo hàm kích hoạt
 
 
-# Lớp GAT: Xây dựng một mạng chú ý đồ thị đa tầng, xếp chồng các tầng GATConv để biến đổi đặc trưng nút,
-# hỗ trợ chú ý đa đầu, kết nối dư, chuẩn hóa và tùy chỉnh đầu ra cho phân loại.
 class GAT(nn.Module):
-    # Hàm __init__: Khởi tạo mô hình GAT với các tham số cấu hình như số tầng, số đầu chú ý,
-    # kích thước đặc trưng, dropout, kết nối dư, chuẩn hóa và chế độ mã hóa.
+    '''
+    Mạng Chú ý Đồ thị (Graph Attention Network - GAT) với nhiều tầng, hỗ trợ chú ý đa đầu, kết nối dư và chuẩn hóa.
+    Mô hình này có thể được sử dụng cho các tác vụ như phân loại nút, dự đoán liên kết hoặc mã hóa đồ thị.
+    '''
     def __init__(self,
                  n_dim,  # Kích thước đặc trưng đầu vào của nút
                  e_dim,  # Kích thước đặc trưng đầu vào của cạnh
@@ -42,6 +42,29 @@ class GAT(nn.Module):
                  concat_out=False,  # Có nối các đầu ra đa đầu (True) hay lấy trung bình (False)
                  encoding=False  # Mô hình có được sử dụng để mã hóa hay không (ảnh hưởng đến kích hoạt/dư cuối)
                  ):
+        '''
+        Khởi tạo mô hình GAT với các tham số cấu hình như số tầng, số đầu chú ý,
+        kích thước đặc trưng, dropout, kết nối dư, chuẩn hóa và chế độ mã hóa.
+
+        :param n_dim: Kích thước đặc trưng đầu vào của nút
+        :param e_dim: Kích thước đặc trưng đầu vào của cạnh
+        :param hidden_dim: Kích thước tầng ẩn
+        :param out_dim: Kích thước đầu ra
+        :param n_layers: Số lượng tầng GAT
+        :param n_heads: Số lượng đầu chú ý trong các tầng trung gian
+        :param n_heads_out: Số lượng đầu chú ý trong tầng đầu ra
+        :param activation: Tên hàm kích hoạt (ví dụ: 'relu')
+        :param feat_drop: Tỷ lệ dropout cho đặc trưng nút
+        :param attn_drop: Tỷ lệ dropout cho trọng số chú ý
+        :param negative_slope: Độ dốc âm cho LeakyReLU
+        :param residual: Có sử dụng kết nối dư (residual) hay không
+        :param norm: Lớp chuẩn hóa (ví dụ: LayerNorm)
+        :param concat_out: Có nối các đầu ra đa đầu (True) hay lấy trung bình (False)
+        :param encoding: Mô hình có được sử dụng để mã hóa hay không (ảnh hưởng đến kích hoạt/dư cuối)
+
+        :return: None
+        '''
+
         super(GAT, self).__init__()  # Khởi tạo lớp cha nn.Module
         self.out_dim = out_dim  # Lưu kích thước đầu ra
         self.n_heads = n_heads  # Lưu số lượng đầu chú ý cho các tầng trung gian
@@ -53,12 +76,12 @@ class GAT(nn.Module):
         last_residual = (encoding and residual)  # Sử dụng kết nối dư ở tầng cuối chỉ khi đang mã hóa và residual là True
         last_norm = norm if encoding else None  # Sử dụng chuẩn hóa ở tầng cuối chỉ khi đang mã hóa
 
-        if self.n_layers == 1:
+        if self.n_layers == 1: # Nếu chỉ có một tầng, thêm một tầng GATConv duy nhất với kích thước đầu ra và số đầu được chỉ định
             self.gats.append(GATConv(
                 n_dim, e_dim, out_dim, n_heads_out, feat_drop, attn_drop, negative_slope,
                 last_residual, norm=last_norm, concat_out=self.concat_out
             ))  # Thêm một tầng GATConv duy nhất với kích thước đầu ra và số đầu được chỉ định
-        else:
+        else: # Nếu có nhiều tầng, thêm tầng đầu vào với kích thước đầu vào và số đầu chú ý
             self.gats.append(GATConv(
                 n_dim, e_dim, hidden_dim, n_heads, feat_drop, attn_drop, negative_slope,
                 residual, create_activation(activation),
@@ -78,9 +101,18 @@ class GAT(nn.Module):
             ))  # Thêm tầng GATConv cuối biến đổi sang kích thước đầu ra
         self.head = nn.Identity()  # Khởi tạo đầu ra là hàm đồng nhất (không biến đổi gì)
 
-    # Hàm forward: Thực hiện lan truyền xuôi của mô hình GAT, truyền đặc trưng nút qua các tầng GATConv
-    # và trả về đầu ra cuối cùng hoặc cả trạng thái ẩn nếu yêu cầu.
+
     def forward(self, g, input_feature, return_hidden=False):
+        '''
+        Thực hiện lan truyền xuôi của mô hình GAT, truyền đặc trưng nút qua các tầng GATConv
+        và trả về đầu ra cuối cùng hoặc cả trạng thái ẩn nếu yêu cầu.
+
+        :param g: Đồ thị đầu vào (DGLGraph)
+        :param input_feature: Đặc trưng đầu vào của nút (tensor)
+        :param return_hidden: Có trả về trạng thái ẩn của các tầng hay không (bool)
+
+        :return: Đầu ra cuối cùng hoặc cả đầu ra và trạng thái ẩn (tuple)
+        '''
         h = input_feature  # Khởi tạo đặc trưng hiện tại là đặc trưng đầu vào
         hidden_list = []  # Danh sách để lưu trạng thái ẩn của mỗi tầng
         for layer in range(self.n_layers):
@@ -91,16 +123,21 @@ class GAT(nn.Module):
         else:
             return self.head(h)  # Chỉ trả về đầu ra cuối
 
-    # Hàm reset_classifier: Thay đổi tầng đầu ra của mô hình để phù hợp với số lớp mới cho tác vụ phân loại.
+
     def reset_classifier(self, num_classes):
+        '''
+        Thay đổi tầng đầu ra của mô hình để phù hợp với số lớp mới cho tác vụ phân loại.
+        :param num_classes: Số lớp đầu ra mới (int)
+        :return: None
+        '''
         self.head = nn.Linear(self.num_heads * self.out_dim, num_classes)  # Thay đầu ra bằng tầng tuyến tính cho phân loại
 
 
-# Lớp GATConv: Triển khai một tầng chú ý đồ thị, tính điểm chú ý dựa trên đặc trưng nút nguồn, đích và cạnh,
-# thực hiện truyền tin để cập nhật đặc trưng nút, hỗ trợ chú ý đa đầu, dropout, kết nối dư và chuẩn hóa.
 class GATConv(nn.Module):
-    # Hàm __init__: Khởi tạo tầng GATConv với các tham số như kích thước đặc trưng, số đầu chú ý,
-    # tỷ lệ dropout, kết nối dư, chuẩn hóa và các tùy chọn khác.
+    '''
+    Tầng Chú ý Đồ thị (Graph Attention Layer) với khả năng xử lý các đặc trưng nút và cạnh,
+    tính toán điểm chú ý và thực hiện truyền tin giữa các nút trong đồ thị.
+    '''
     def __init__(self,
                  in_dim,  # Kích thước đặc trưng đầu vào của nút (có thể là tuple cho src/dst)
                  e_dim,  # Kích thước đặc trưng đầu vào của cạnh
@@ -115,6 +152,26 @@ class GATConv(nn.Module):
                  bias=True,  # Có bao gồm bias trong đầu ra hay không
                  norm=None,  # Lớp chuẩn hóa (ví dụ: LayerNorm)
                  concat_out=True):  # Có nối các đầu ra đa đầu hay không
+        '''
+        Khởi tạo tầng GATConv với các tham số cấu hình như kích thước đầu vào, đầu ra,
+        số đầu chú ý, dropout, kết nối dư, chuẩn hóa và chế độ cho phép bậc vào bằng 0.
+
+        :param in_dim: Kích thước đặc trưng đầu vào của nút (có thể là tuple cho src/dst)
+        :param e_dim: Kích thước đặc trưng đầu vào của cạnh
+        :param out_dim: Kích thước đầu ra cho mỗi đầu
+        :param n_heads: Số lượng đầu chú ý
+        :param feat_drop: Tỷ lệ dropout cho đặc trưng nút
+        :param attn_drop: Tỷ lệ dropout cho trọng số chú ý
+        :param negative_slope: Độ dốc âm cho LeakyReLU
+        :param residual: Có sử dụng kết nối dư hay không
+        :param activation: Hàm kích hoạt (ví dụ: ReLU)
+        :param allow_zero_in_degree: Cho phép nút có bậc vào bằng 0
+        :param bias: Có bao gồm bias trong đầu ra hay không
+        :param norm: Lớp chuẩn hóa (ví dụ: LayerNorm)
+        :param concat_out: Có nối các đầu ra đa đầu hay không
+
+        :return: None
+        '''
         super(GATConv, self).__init__()  # Khởi tạo lớp cha nn.Module
         self.n_heads = n_heads  # Lưu số lượng đầu chú ý
         self.src_feat, self.dst_feat = expand_as_pair(in_dim)  # Tách kích thước đầu vào thành kích thước nguồn và đích
@@ -123,12 +180,12 @@ class GATConv(nn.Module):
         self.allow_zero_in_degree = allow_zero_in_degree  # Lưu trạng thái cho phép nút có bậc vào bằng 0
         self.concat_out = concat_out  # Lưu trạng thái có nối các đầu ra đa đầu hay không
 
-        if isinstance(in_dim, tuple):
+        if isinstance(in_dim, tuple): # Nếu đầu vào là tuple, tức là có đặc trưng riêng cho nút nguồn và đích
             self.fc_node_embedding = nn.Linear(
                 self.src_feat, self.out_feat * self.n_heads, bias=False)  # Tầng tuyến tính cho nhúng nút
             self.fc_src = nn.Linear(self.src_feat, self.out_feat * self.n_heads, bias=False)  # Tầng tuyến tính cho nút nguồn
             self.fc_dst = nn.Linear(self.dst_feat, self.out_feat * self.n_heads, bias=False)  # Tầng tuyến tính cho nút đích
-        else:
+        else: # Nếu đầu vào không phải là tuple, tức là sử dụng cùng một đặc trưng cho cả nút nguồn và đích
             self.fc_node_embedding = nn.Linear(
                 self.src_feat, self.out_feat * self.n_heads, bias=False)  # Tầng tuyến tính cho nhúng nút (không sử dụng)
             self.fc = nn.Linear(self.src_feat, self.out_feat * self.n_heads, bias=False)  # Tầng tuyến tính cho tất cả nút
@@ -139,73 +196,94 @@ class GATConv(nn.Module):
         self.feat_drop = nn.Dropout(feat_drop)  # Tầng dropout cho đặc trưng nút
         self.attn_drop = nn.Dropout(attn_drop)  # Tầng dropout cho trọng số chú ý
         self.leaky_relu = nn.LeakyReLU(negative_slope)  # Hàm kích hoạt LeakyReLU cho điểm chú ý
-        if bias:
+        if bias: # Nếu sử dụng bias, khởi tạo tham số bias cho đầu ra
             self.bias = nn.Parameter(torch.FloatTensor(size=(1, self.n_heads, self.out_feat)))  # Tham số bias cho đầu ra
-        else:
+        else: # Nếu không sử dụng bias, đăng ký None làm bias
             self.register_buffer('bias', None)  # Đăng ký None làm bias nếu không sử dụng
-        if residual:
-            if self.dst_feat != self.n_heads * self.out_feat:
+        if residual: # Nếu sử dụng kết nối dư, khởi tạo tầng tuyến tính cho kết nối dư
+            if self.dst_feat != self.n_heads * self.out_feat: # Nếu kích thước đầu vào và đầu ra không khớp, cần biến đổi
                 self.res_fc = nn.Linear(
                     self.dst_feat, self.n_heads * self.out_feat, bias=False)  # Tầng tuyến tính cho kết nối dư
-            else:
+            else: # Nếu kích thước đầu vào và đầu ra khớp, không cần biến đổi
                 self.res_fc = nn.Identity()  # Hàm đồng nhất nếu kích thước đầu vào và đầu ra khớp
-        else:
+        else: # Nếu không sử dụng kết nối dư, đăng ký None làm kết nối dư
             self.register_buffer('res_fc', None)  # Đăng ký None nếu không có kết nối dư
         self.reset_parameters()  # Khởi tạo các tham số
         self.activation = activation  # Lưu hàm kích hoạt
         self.norm = norm  # Lưu lớp chuẩn hóa
-        if norm is not None:
+        if norm is not None: # Nếu có chuẩn hóa, khởi tạo lớp chuẩn hóa với kích thước đầu ra
             self.norm = norm(self.n_heads * self.out_feat)  # Khởi tạo chuẩn hóa với kích thước đầu ra
 
-    # Hàm reset_parameters: Khởi tạo các tham số của tầng GATConv (trọng số, bias) bằng phương pháp Xavier
-    # để đảm bảo giá trị ban đầu phù hợp cho huấn luyện.
+
     def reset_parameters(self):
+        '''
+        Khởi tạo lại các tham số của tầng GATConv, bao gồm trọng số và bias.
+        Sử dụng phương pháp khởi tạo Xavier với hàm kích hoạt ReLU để đảm bảo các trọng số được khởi tạo tốt.
+        
+        :param self: Đối tượng lớp GATConv
+        
+        :return: None
+        '''
         gain = nn.init.calculate_gain('relu')  # Tính gain cho hàm kích hoạt kiểu ReLU
         nn.init.xavier_normal_(self.edge_fc.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính cạnh
-        if hasattr(self, 'fc'):
-            nn.init.xavier_normal_(self.fc.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính nút (nếu có)
-        else:
+        if hasattr(self, 'fc'): # Nếu có tầng tuyến tính cho tất cả nút, khởi tạo trọng số tầng này
+            nn.init.xavier_normal_(self.fc.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính nút
+        else: # Nếu không có tầng tuyến tính cho tất cả nút, khởi tạo trọng số cho các tầng nguồn/đích
             nn.init.xavier_normal_(self.fc_src.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính nút nguồn
             nn.init.xavier_normal_(self.fc_dst.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính nút đích
         nn.init.xavier_normal_(self.attn_h, gain=gain)  # Khởi tạo tham số chú ý nút nguồn
         nn.init.xavier_normal_(self.attn_e, gain=gain)  # Khởi tạo tham số chú ý cạnh
         nn.init.xavier_normal_(self.attn_t, gain=gain)  # Khởi tạo tham số chú ý nút đích
-        if self.bias is not None:
+        if self.bias is not None: # Nếu có bias, khởi tạo bias với giá trị 0
             nn.init.constant_(self.bias, 0)  # Khởi tạo bias bằng 0
-        if isinstance(self.res_fc, nn.Linear):
+        if isinstance(self.res_fc, nn.Linear): # Nếu có tầng tuyến tính cho kết nối dư, khởi tạo trọng số tầng này
             nn.init.xavier_normal_(self.res_fc.weight, gain=gain)  # Khởi tạo trọng số tầng tuyến tính dư
 
-    # Hàm set_allow_zero_in_degree: Cập nhật trạng thái cho phép các nút có bậc vào bằng 0,
-    # hữu ích khi xử lý đồ thị có nút không nhận thông tin từ láng giềng.
+
     def set_allow_zero_in_degree(self, set_value):
+        '''
+        Cập nhật trạng thái cho phép các nút có bậc vào bằng 0.
+        
+        :param set_value: Giá trị True hoặc False để chỉ định trạng thái cho phép
+        
+        :return: None
+        '''
         self.allow_zero_in_degree = set_value  # Cập nhật cờ cho phép
 
-    # Hàm forward: Thực hiện lan truyền xuôi của tầng GATConv, tính điểm chú ý, truyền tin và cập nhật đặc trưng nút,
-    # có thể trả về trọng số chú ý nếu yêu cầu.
+
     def forward(self, graph, feat, get_attention=False):
+        '''
+        Thực hiện lan truyền xuôi của tầng GATConv, tính toán điểm chú ý và thực hiện truyền tin giữa các nút trong đồ thị.
+        
+        :param graph: Đồ thị đầu vào (DGLGraph)
+        :param feat: Đặc trưng đầu vào của nút (tensor hoặc tuple cho src/dst)
+        :param get_attention: Có trả về trọng số chú ý hay không (bool)
+        
+        :return: Đầu ra cuối cùng hoặc cả đầu ra và trọng số chú ý (tuple)
+        '''
         edge_feature = graph.edata['attr']  # Lấy đặc trưng cạnh từ đồ thị
         with graph.local_scope():  # Tạo phạm vi cục bộ để tránh thay đổi đồ thị
-            if isinstance(feat, tuple):
+            if isinstance(feat, tuple): # Nếu đầu vào là tuple, tức là có đặc trưng riêng cho nút nguồn và đích
                 src_prefix_shape = feat[0].shape[:-1]  # Hình dạng đặc trưng nguồn (loại trừ chiều đặc trưng)
                 dst_prefix_shape = feat[1].shape[:-1]  # Hình dạng đặc trưng đích (loại trừ chiều đặc trưng)
                 h_src = self.feat_drop(feat[0])  # Áp dụng dropout cho đặc trưng nút nguồn
                 h_dst = self.feat_drop(feat[1])  # Áp dụng dropout cho đặc trưng nút đích
-                if not hasattr(self, 'fc_src'):
+                if not hasattr(self, 'fc_src'): # Nếu không có tầng tuyến tính cho nút nguồn, tức là sử dụng cùng một tầng cho cả hai
                     feat_src = self.fc(h_src).view(
                         *src_prefix_shape, self.n_heads, self.out_feat)  # Biến đổi đặc trưng nguồn và định hình lại
                     feat_dst = self.fc(h_dst).view(
                         *dst_prefix_shape, self.n_heads, self.out_feat)  # Biến đổi đặc trưng đích và định hình lại
-                else:
+                else: # Nếu có tầng tuyến tính riêng cho nút nguồn và đích
                     feat_src = self.fc_src(h_src).view(
                         *src_prefix_shape, self.n_heads, self.out_feat)  # Biến đổi đặc trưng nguồn và định hình lại
                     feat_dst = self.fc_dst(h_dst).view(
                         *dst_prefix_shape, self.n_heads, self.out_feat)  # Biến đổi đặc trưng đích và định hình lại
-            else:
+            else: # Nếu đầu vào không phải là tuple, tức là sử dụng cùng một đặc trưng cho cả nút nguồn và đích
                 src_prefix_shape = dst_prefix_shape = feat.shape[:-1]  # Hình dạng đặc trưng (loại trừ chiều đặc trưng)
                 h_src = h_dst = self.feat_drop(feat)  # Áp dụng dropout cho đặc trưng nút
                 feat_src = feat_dst = self.fc(h_src).view(
                     *src_prefix_shape, self.n_heads, self.out_feat)  # Biến đổi đặc trưng và định hình lại
-                if graph.is_block:
+                if graph.is_block: # Nếu đồ thị là khối (block), tức là đang trong quá trình huấn luyện
                     feat_dst = feat_src[:graph.number_of_dst_nodes()]  # Chọn đặc trưng nút đích
                     h_dst = h_dst[:graph.number_of_dst_nodes()]  # Chọn đặc trưng thô của nút đích
                     dst_prefix_shape = (graph.number_of_dst_nodes(),) + dst_prefix_shape[1:]  # Cập nhật hình dạng đích
@@ -235,32 +313,30 @@ class GATConv(nn.Module):
 
             rst = graph.dstdata['hs'].view(-1, self.n_heads, self.out_feat)  # Định hình lại đặc trưng đầu ra
 
-            if self.bias is not None:
+            if self.bias is not None: # Nếu có bias, cộng bias vào đầu ra
                 rst = rst + self.bias.view(
                     *((1,) * len(dst_prefix_shape)), self.n_heads, self.out_feat)  # Cộng bias vào đầu ra
 
             # residual
 
-            if self.res_fc is not None:
-                # Use -1 rather than self._num_heads to handle broadcasting
+            if self.res_fc is not None: # Nếu có kết nối dư, biến đổi đầu vào dư
                 resval = self.res_fc(h_dst).view(*dst_prefix_shape, -1, self.out_feat)  # Biến đổi đầu vào dư
                 rst = rst + resval  # Cộng kết nối dư vào đầu ra
 
-            if self.concat_out:
+            if self.concat_out: # Nếu nối các đầu ra đa đầu, nối các đầu ra lại với nhau
                 rst = rst.flatten(1)  # Nối các đầu ra đa đầu
-            else:
+            else: # Nếu không nối, lấy trung bình các đầu ra đa đầu
                 rst = torch.mean(rst, dim=1)  # Lấy trung bình các đầu ra đa đầu
 
-            if self.norm is not None:
+            if self.norm is not None: # Nếu có chuẩn hóa, áp dụng chuẩn hóa cho đầu ra
                 rst = self.norm(rst)  # Áp dụng chuẩn hóa
 
-                # activation
-            if self.activation:
+            if self.activation: # Nếu có hàm kích hoạt, áp dụng hàm kích hoạt cho đầu ra
                 rst = self.activation(rst)  # Áp dụng hàm kích hoạt
 
-            if get_attention:
+            if get_attention: # Nếu yêu cầu trọng số chú ý, trả về đầu ra và trọng số chú ý
                 return rst, graph.edata['a']  # Trả về đầu ra và trọng số chú ý
-            else:
+            else: # Nếu không yêu cầu trọng số chú ý, chỉ trả về đầu ra
                 return rst  # Chỉ trả về đầu ra
 
 
