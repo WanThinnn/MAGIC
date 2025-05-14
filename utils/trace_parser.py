@@ -47,23 +47,16 @@ def read_single_graph(dataset, malicious, path, test=False):
     """
     Đọc và chuyển đổi một file đồ thị đơn lẻ thành đồ thị NetworkX.
     
-    Parameters:
-    -----------
-    dataset : str
-        Tên dataset ('trace', 'theia', hoặc 'cadets')
-    malicious : set
-        Tập hợp các entity độc hại cần lọc
-    path : str
-        Đường dẫn đến file dữ liệu
-    test : bool, optional
-        Cờ đánh dấu có phải dữ liệu test hay không, mặc định là False
+    :param dataset: dataset
+    :param malicious: danh sách các entity độc hại
+    :param path: đường dẫn đến file đồ thị
+    :param test: biến boolean để xác định có phải là dữ liệu kiểm thử hay không
+    :return: node_map, g
+        - node_map: dictionary ánh xạ UUID sang ID số của node
+        - g: đồ thị NetworkX đã được chuyển đổi
+    :rtype: tuple
+        
     
-    Returns:
-    --------
-    tuple
-        (node_map, g) trong đó:
-        - node_map: Dictionary ánh xạ UUID sang node ID
-        - g: Đồ thị NetworkX đã được xây dựng
     """
     global node_type_cnt, edge_type_cnt  # Sử dụng biến toàn cục để đếm loại node và edge
     g = nx.DiGraph()  # Tạo đồ thị có hướng mới
@@ -140,15 +133,10 @@ def preprocess_dataset(dataset):
     """
     Tiền xử lý dataset bằng cách đọc các file JSON và chuyển đổi thành định dạng đồ thị.
     
-    Parameters:
-    -----------
-    dataset : str
-        Tên dataset cần tiền xử lý ('trace', 'theia', hoặc 'cadets')
-    
-    Returns:
-    --------
-    None
-        Kết quả được lưu vào các file trong thư mục data/{dataset}/
+    :param dataset: tên dataset cần tiền xử lý ('trace', 'theia', hoặc 'cadets')
+    :type dataset: str
+    :return: None
+    :rtype: None
     """
     id_nodetype_map = {}  # Dictionary ánh xạ UUID sang loại node
     id_nodename_map = {}  # Dictionary ánh xạ UUID sang tên node
@@ -257,18 +245,10 @@ def read_graphs(dataset):
     """
     Đọc và xử lý toàn bộ đồ thị cho một dataset, bao gồm cả dữ liệu train và test.
     
-    Parameters:
-    -----------
-    dataset : str
-        Tên dataset cần xử lý ('trace', 'theia', hoặc 'cadets')
-    
-    Returns:
-    --------
-    None
-        Kết quả được lưu vào các file pickle trong thư mục data/{dataset}/
-        - malicious.pkl: Chứa thông tin về các entity độc hại
-        - train.pkl: Chứa các đồ thị train
-        - test.pkl: Chứa các đồ thị test
+    :param dataset: tên dataset cần xử lý ('trace', 'theia', hoặc 'cadets')
+    :type dataset: str
+    :return: None
+    :rtype: None
     """
     # Đọc danh sách các entity độc hại
     malicious_entities = '../data/{}/{}.txt'.format(dataset, dataset)
