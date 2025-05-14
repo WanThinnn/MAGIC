@@ -19,21 +19,10 @@ def build_model(args):
     """
     Hàm xây dựng và trả về một instance của GMAEModel với các tham số từ args.
     
-    Parameters:
-    -----------
-    args : argparse.Namespace
-        Chứa các tham số cấu hình cho mô hình:
-        - num_hidden (int): Kích thước của các lớp ẩn
-        - num_layers (int): Số lớp trong encoder/decoder
-        - negative_slope (float): Hệ số độ dốc âm cho LeakyReLU
-        - mask_rate (float): Tỷ lệ nút bị che trong quá trình huấn luyện
-        - alpha_l (float): Hệ số alpha cho hàm mất mát SCE
-        - n_dim (int): Kích thước vector đặc trưng nút
-        - e_dim (int): Kích thước vector đặc trưng cạnh
-    
-    Returns:
-    --------
-    GMAEModel: Instance của mô hình GMAE được cấu hình
+    :param args: Đối tượng chứa các tham số cấu hình cho mô hình
+    :return: Instance của GMAEModel
+    :rtype: GMAEModel
+    :raises NotImplementedError: Nếu hàm mất mát không được hỗ trợ
     """
     # Lấy các tham số từ args
     num_hidden = args.num_hidden  # Kích thước của các lớp ẩn
@@ -71,24 +60,43 @@ class GMAEModel(nn.Module):
     1. Tái tạo thuộc tính nút bị che (masked node attributes)
     2. Tái tạo cấu trúc đồ thị (edge reconstruction)
     
-    Parameters:
-    -----------
-    n_dim (int): Kích thước vector đặc trưng nút đầu vào
-    e_dim (int): Kích thước vector đặc trưng cạnh
-    hidden_dim (int): Kích thước của các lớp ẩn
-    n_layers (int): Số lớp trong encoder
-    n_heads (int): Số attention heads trong GAT
-    activation (str): Hàm kích hoạt sử dụng ('prelu', 'relu', etc.)
-    feat_drop (float): Tỷ lệ dropout cho đặc trưng
-    negative_slope (float): Hệ số độ dốc âm cho LeakyReLU
-    residual (bool): Có sử dụng kết nối tàn dư hay không
-    norm (str): Loại chuẩn hóa sử dụng ('BatchNorm', 'LayerNorm', etc.)
-    mask_rate (float): Tỷ lệ nút bị che trong quá trình huấn luyện
-    loss_fn (str): Hàm mất mát sử dụng ('sce' cho scaled cosine error)
-    alpha_l (float): Hệ số alpha cho hàm mất mát SCE
+    Các phương thức chính trong lớp này bao gồm:
+    - __init__: Khởi tạo mô hình với các tham số cấu hình.
+    - setup_loss_fn: Thiết lập hàm mất mát cho mô hình.
+    - encoding_mask_noise: Tạo nhiễu bằng cách che một số nút trong đồ thị.
+    - forward: Hàm chính để chạy mô hình và tính toán hàm mất mát.
+    - compute_loss: Tính toán tổng hàm mất mát cho cả hai nhiệm vụ.
+    - embed: Tạo biểu diễn nhúng cho các nút trong đồ thị.
+    - enc_params: Trả về các tham số của encoder.
+    - dec_params: Trả về các tham số của decoder và lớp chuyển đổi encoder-to-decoder.
+    - output_hidden_dim: Kích thước đầu ra của lớp ẩn.
+    
     """
     def __init__(self, n_dim, e_dim, hidden_dim, n_layers, n_heads, activation,
                  feat_drop, negative_slope, residual, norm, mask_rate=0.5, loss_fn="sce", alpha_l=2):
+        '''
+        Hàm khởi tạo mô hình GMAEModel.
+        Các tham số đầu vào bao gồm kích thước đặc trưng nút, cạnh, kích thước ẩn,
+        số lớp, số heads, hàm kích hoạt, tỷ lệ dropout, hệ số độ dốc âm,
+        chế độ kết nối tàn dư, loại chuẩn hóa, tỷ lệ che nút, hàm mất mát và hệ số alpha.
+        :param n_dim: Kích thước đặc trưng nút đầu vào
+        :param e_dim: Kích thước đặc trưng cạnh đầu vào
+        :param hidden_dim: Kích thước đầu ra của lớp ẩn
+        :param n_layers: Số lớp trong encoder/decoder
+        :param n_heads: Số lượng attention heads
+        :param activation: Hàm kích hoạt sử dụng
+        :param feat_drop: Tỷ lệ dropout cho đặc trưng
+        :param negative_slope: Hệ số độ dốc âm cho LeakyReLU
+        :param residual: Sử dụng kết nối tàn dư hay không
+        :param norm: Loại chuẩn hóa sử dụng (BatchNorm, LayerNorm, GraphNorm)
+        :param mask_rate: Tỷ lệ nút bị che trong quá trình huấn luyện
+        :param loss_fn: Hàm mất mát sử dụng (sce)
+        :param alpha_l: Hệ số alpha cho hàm mất mát SCE
+        :return: None
+        :rtype: None
+        
+        
+        '''
         super(GMAEModel, self).__init__()
         # Lưu các tham số cấu hình
         self._mask_rate = mask_rate  # Tỷ lệ nút bị che
@@ -181,17 +189,11 @@ class GMAEModel(nn.Module):
         """
         Tạo nhiễu bằng cách che (mask) một số nút trong đồ thị.
         
-        Parameters:
-        -----------
-        g (DGLGraph): Đồ thị đầu vào
-        mask_rate (float): Tỷ lệ nút sẽ bị che
+        :param g: Đồ thị đầu vào
+        :param mask_rate: Tỷ lệ nút bị che
+        :return: Đồ thị mới với các nút bị che và chỉ số của các nút bị che
+        :rtype: tuple (DGLGraph, tuple)
         
-        Returns:
-        --------
-        tuple: (new_g, (mask_nodes, keep_nodes))
-            - new_g: Đồ thị mới với các nút bị che
-            - mask_nodes: Chỉ số của các nút bị che
-            - keep_nodes: Chỉ số của các nút không bị che
         """
         new_g = g.clone()  # Tạo bản sao của đồ thị để không ảnh hưởng đến đồ thị gốc
         num_nodes = g.num_nodes()  # Lấy số lượng nút
@@ -217,13 +219,10 @@ class GMAEModel(nn.Module):
         """
         Tính toán tổng hàm mất mát cho cả hai nhiệm vụ: tái tạo thuộc tính và cấu trúc.
         
-        Parameters:
-        -----------
-        g (DGLGraph): Đồ thị đầu vào
-        
-        Returns:
-        --------
-        torch.Tensor: Tổng hàm mất mát kết hợp
+        :param g: Đồ thị đầu vào
+        :return: Tổng hàm mất mát
+        :rtype: torch.Tensor
+     
         """
         # Tạo nhiễu bằng cách che một số nút
         pre_use_g, (mask_nodes, keep_nodes) = self.encoding_mask_noise(g, self._mask_rate)
@@ -271,13 +270,10 @@ class GMAEModel(nn.Module):
         """
         Tạo biểu diễn nhúng cho các nút trong đồ thị.
         
-        Parameters:
-        -----------
-        g (DGLGraph): Đồ thị đầu vào
+        :param g: Đồ thị đầu vào
+        :return: Biểu diễn nhúng cho các nút
+        :rtype: torch.Tensor
         
-        Returns:
-        --------
-        torch.Tensor: Ma trận biểu diễn nhúng của các nút
         """
         # Lấy đặc trưng nút và chuyển sang device phù hợp
         x = g.ndata['attr'].to(g.device)

@@ -22,6 +22,7 @@ def extract_dataloaders(entries, batch_size):
     :param entries: danh sách các chỉ số đồ thị để huấn luyện
     :param batch_size: kích thước batch khi huấn luyện
     :return: GraphDataLoader với sampler ngẫu nhiên
+    :rtype: GraphDataLoader
     '''
     random.shuffle(entries)
     train_idx = torch.arange(len(entries))

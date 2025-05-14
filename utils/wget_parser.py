@@ -21,8 +21,10 @@ CONSOLE_ARGUMENTS = None
 def hashgen(l):
     """
     Hàm tạo mã băm từ danh sách chuỗi đầu vào.
-    @param l: Danh sách các chuỗi (thường là các thuộc tính của node hoặc edge)
-    @return: Một giá trị số nguyên duy nhất đại diện cho mã băm của toàn bộ danh sách.
+    
+    :param l: Danh sách các chuỗi (thường là các thuộc tính của node hoặc edge)
+    :return: Một giá trị số nguyên duy nhất đại diện cho mã băm của toàn bộ danh sách.
+    :rtype: int
     """
     hasher = xxhash.xxh64()  # Sử dụng thuật toán băm xxHash 64-bit
     for e in l:
@@ -34,8 +36,12 @@ def hashgen(l):
 def parse_nodes(json_string, node_map):
     """
     Phân tích chuỗi JSON CamFlow để trích xuất các node dạng 'activity' và 'entity'.
-    @param json_string: Một chuỗi JSON CamFlow chứa thông tin về các node.
-    @param node_map: Một dict ánh xạ UID của node sang kiểu của node đó (ví dụ: 'file', 'task'...).
+    
+    :param json_string: Một chuỗi JSON CamFlow chứa thông tin về các node.
+    :param node_map: Một dict ánh xạ UID của node sang kiểu của node đó (ví dụ: 'file', 'task'...).
+    :type node_map: dict
+    :return: None
+    :rtype: None
     """
     json_object = None
     try:
@@ -74,8 +80,13 @@ def parse_nodes(json_string, node_map):
 def parse_all_nodes(filename, node_map):
     """
     Phân tích toàn bộ các node trong một file dữ liệu CamFlow.
-    @param filename: Đường dẫn tới file JSON CamFlow.
-    @param node_map: Dict lưu ánh xạ từ UID node sang kiểu node (được cập nhật trong quá trình xử lý).
+    
+    :param filename: Đường dẫn tới file JSON CamFlow.
+    :param node_map: Dict lưu ánh xạ từ UID node sang kiểu node (được cập nhật trong quá trình xử lý).
+    :type node_map: dict
+    :return: None
+    :rtype: None
+    
     """
     description = '\x1b[6;30;42m[STATUS]\x1b[0m Đang phân tích các node từ file {}'.format(filename)
     pb = tqdm(desc=description, mininterval=1.0, unit=" dòng")  # Hiển thị tiến trình bằng tqdm
@@ -114,6 +125,18 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
         <ID nguồn> \t <ID đích> \t <kiểu nguồn>:<kiểu đích>:<kiểu cạnh>:<timestamp logic>:<timestamp stats>
 
     Hàm trả về tổng số cạnh hợp lệ đã được phân tích.
+    
+    :param inputfile: Đường dẫn tới file dữ liệu CamFlow đầu vào.
+    :type inputfile: str
+    :param outputfile: Đường dẫn tới file đầu ra chứa danh sách cạnh đã xử lý.
+    :type outputfile: str
+    :param node_map: Dict ánh xạ từ UUID gốc của node sang ID số nguyên tương ứng.
+    :type node_map: dict
+    :param noencode: Nếu True, không băm UUID sang số nguyên.
+    :type noencode: bool
+    :return: Tổng số cạnh hợp lệ đã được phân tích.
+    :rtype: int
+    
     """
     total_edges = 0 # Biến đếm số cạnh hợp lệ
     smallest_timestamp = None  # Biến lưu timestamp nhỏ nhất (phục vụ việc tính adjusted_ts)
@@ -894,6 +917,18 @@ def parse_all_edges(inputfile, outputfile, node_map, noencode):
 
 
 def read_single_graph(file_name, threshold):
+    '''
+    Hàm này đọc một đồ thị từ file và trả về danh sách các cạnh.
+    Đồ thị được lưu dưới dạng danh sách các cạnh, mỗi cạnh là một danh sách con chứa thông tin về
+    node nguồn, node đích, loại node nguồn, loại node đích, loại cạnh và thứ tự cạnh.
+    Nếu số lượng cạnh lớn hơn ngưỡng `threshold`, chỉ trả về `threshold` cạnh đầu tiên.
+    
+    :param file_name: Tên file chứa đồ thị
+    :param threshold: Ngưỡng số lượng cạnh tối đa để trả về
+    :return: Danh sách các cạnh của đồ thị
+    :rtype: list
+    
+    '''
     graph = []         # Danh sách chứa các cạnh của đồ thị
     edge_cnt = 0       # Bộ đếm số lượng cạnh đã đọc
 
@@ -937,6 +972,19 @@ def read_single_graph(file_name, threshold):
 
 
 def process_graph(name, threshold):
+    '''
+    Hàm process_graph đọc đồ thị từ file và trả về đồ thị đã được xử lý.
+    Đồ thị được lưu dưới dạng danh sách các cạnh, mỗi cạnh là một danh sách con chứa thông tin về
+    node nguồn, node đích, loại node nguồn, loại node đích, loại cạnh và thứ tự cạnh.
+    Nếu số lượng cạnh lớn hơn ngưỡng `threshold`, chỉ trả về `threshold` cạnh đầu tiên.
+    
+    :param name: Tên file chứa đồ thị
+    :param threshold: Ngưỡng số lượng cạnh tối đa để trả về
+    :return: Số lượng cạnh đã xử lý và đồ thị đã được xử lý
+    :rtype: tuple
+    
+    
+    '''
     # Đọc đồ thị từ file tên `name`, chỉ lấy các cạnh dưới ngưỡng `threshold`
     graph = read_single_graph(name, threshold)
     result_graph = nx.DiGraph()  # Tạo đồ thị có hướng mới
@@ -972,6 +1020,16 @@ edge_type_dict = {}    # Từ điển đếm số lượng cạnh theo loại
 
 
 def format_graph(g, name):
+    '''
+    Hàm format_graph chuyển đổi đồ thị từ định dạng node-link sang định dạng số nguyên.
+    Đồ thị được lưu dưới dạng JSON với các node và cạnh được định danh bằng số nguyên.
+    
+    :param g: Đồ thị đầu vào (định dạng node-link)
+    :param name: Tên file đầu ra (không bao gồm phần mở rộng)
+    :return: None
+    :rtype: None
+    
+    '''
     new_g = nx.DiGraph()     # Tạo đồ thị mới (định danh node bằng số nguyên)
     node_map = {}            # Ánh xạ node cũ sang ID mới (số)
     node_cnt = 0             # Bộ đếm node mới
