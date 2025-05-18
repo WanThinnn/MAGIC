@@ -18,27 +18,24 @@ def batch_level_evaluation(model, pooler, device, method, dataset, n_dim=0, e_di
     """
     Đánh giá mô hình ở mức batch (tập hợp các đồ thị)
     
-    Parameters:
-    -----------
-    model : torch.nn.Module
+    :param model: torch.nn.Module
         Mô hình cần đánh giá
-    pooler : callable
+    :param pooler: callable
         Hàm pooling để tổng hợp embedding của các node thành embedding của đồ thị
-    device : torch.device
+    :param device: torch.device
         Thiết bị tính toán (CPU/GPU)
-    method : str
+    :param method: str
         Phương pháp đánh giá ('knn')
-    dataset : str
+    :param dataset: str
         Tên dataset ('wget', 'streamspot', etc.)
-    n_dim : int, optional
+    :param n_dim: int, optional
         Số chiều của node features
-    e_dim : int, optional
+    :param e_dim: int, optional
         Số chiều của edge features
         
-    Returns:
-    --------
-    tuple
-        (test_auc, test_std): AUC trung bình và độ lệch chuẩn
+    :return: tuple
+        (test_auc, test_std): AUC và độ lệch chuẩn của mô hình
+    
     """
     # Chuyển mô hình sang chế độ đánh giá (không cập nhật trọng số)
     model.eval()
@@ -90,21 +87,18 @@ def evaluate_batch_level_using_knn(repeat, dataset, embeddings, labels):
     """
     Đánh giá mô hình sử dụng KNN ở mức batch
     
-    Parameters:
-    -----------
-    repeat : int
+    :param repeat: int
         Số lần lặp lại đánh giá (-1 cho một lần duy nhất)
-    dataset : str
-        Tên dataset
-    embeddings : np.ndarray
+    :param dataset: str
+        Tên dataset ('wget', 'streamspot', etc.)
+    :param embeddings: np.ndarray
         Ma trận embedding của các đồ thị
-    labels : np.ndarray
+    :param labels: np.ndarray
         Nhãn của các đồ thị (0: bình thường, 1: bất thường)
         
-    Returns:
-    --------
-    tuple
+    :return: tuple  
         (auc_mean, auc_std): AUC trung bình và độ lệch chuẩn
+    
     """
     x, y = embeddings, labels
     
@@ -272,20 +266,16 @@ def evaluate_entity_level_using_knn(dataset, x_train, x_test, y_test):
     """
     Đánh giá mô hình sử dụng KNN ở mức entity (node)
     
-    Parameters:
-    -----------
-    dataset : str
+    :param dataset: str
         Tên dataset ('cadets', 'trace', 'theia')
-    x_train : np.ndarray
+    :param x_train: np.ndarray
         Ma trận embedding của các node huấn luyện
-    x_test : np.ndarray
+    :param x_test: np.ndarray
         Ma trận embedding của các node kiểm thử
-    y_test : np.ndarray
+    :param y_test: np.ndarray
         Nhãn của các node kiểm thử (0: bình thường, 1: bất thường)
-        
-    Returns:
-    --------
-    tuple
+    
+    :return: tuple
         (auc, 0.0, None, None): AUC và các metric khác
     """
     # Chuẩn hóa dữ liệu
