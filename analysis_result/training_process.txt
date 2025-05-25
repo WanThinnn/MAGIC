@@ -10,4 +10,17 @@ graph TD
     H --> I[Evaluate on Mixed Test Data]
     I --> J[Deploy for Real-time Detection]
 
-- Quá trình 
+- Quá trình Masking:
+Thay vì cần external labels:
+- Input: Graph với một số nodes bị che
+- Target: Đoán lại features gốc của masked nodes  
+- Model tự tạo supervised signal từ chính data
+
+Ví dụ trong Provenance Graph:
+Process A --read--> [MASKED FILE] --write--> Process B
+
+Model phải dựa vào:
+- Process A type & attributes
+- Process B type & attributes  
+- Relationship patterns
+→ Để đoán File type & attributes
