@@ -1,0 +1,13 @@
+- Quá trình train:
+graph TD
+    A[Raw DARPA JSON Files] --> B[Parse Entities & Events]
+    B --> C[Filter OUT Malicious from Training]
+    C --> D[Build Normal-only Training Graphs]
+    D --> E[Train Graph Autoencoder]
+    E --> F[Learn Normal Patterns]
+    F --> G[Extract Test Embeddings]
+    G --> H[Train KNN on Normal Embeddings]
+    H --> I[Evaluate on Mixed Test Data]
+    I --> J[Deploy for Real-time Detection]
+
+- Quá trình 
