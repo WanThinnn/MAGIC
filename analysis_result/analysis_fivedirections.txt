@@ -1,0 +1,53 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: fivedirections
+Analysis Time: 2025-05-25 13:44:43
+==================================================
+
+DATASET TYPE: Entity-level
+
+BASIC INFORMATION:
+  Training graphs: 21
+  Test graphs: 7
+  Node features: 13 dimensions
+  Edge features: 25 dimensions
+
+GROUND TRUTH:
+  Malicious nodes: 202
+  Malicious node IDs: [367022, 276522, 863526, 364674, 1485116, 753735, 863697, 335559, 400751, 331806]...
+  (showing first 10 out of 202)
+
+SAMPLE GRAPH ANALYSIS:
+  Training Graph 0: 195651 nodes, 471480 edges
+  Training Graph 1: 227896 nodes, 486474 edges
+  Training Graph 2: 150548 nodes, 448424 edges
+  Training Graph 3: 144596 nodes, 379305 edges
+  Training Graph 4: 195688 nodes, 421570 edges
+  Test Graph 0: 284613 nodes, 625989 edges
+  Test Graph 1: 208937 nodes, 442838 edges
+  Test Graph 2: 374484 nodes, 687507 edges
+
+SAMPLE GRAPH STATISTICS:
+  Total graphs analyzed: 8
+  
+  NODES:
+    Min: 144596
+    Max: 374484
+    Average: 222801.6
+    Median: 208937
+  
+  EDGES:
+    Min: 379305
+    Max: 687507
+    Average: 495448.4
+    Median: 471480
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 8
+  
+  GRAPH DENSITY:
+    Min density: 0.000005
+    Max density: 0.000020
+    Average density: 0.000012
+  
