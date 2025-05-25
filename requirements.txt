@@ -5,3 +5,5 @@ torchaudio==0.12.1
 dgl==1.0.0
 scikit-learn==1.2.2
 xxhash
+flask
+seaborn

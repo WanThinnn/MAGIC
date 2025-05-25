@@ -72,6 +72,50 @@ Then execute `eval.py` the same as in standard evaluation:
 For more running options, please refer to `utils/config.py`
 
 
+
+
+## WAGIC - GUI Application
+
+**WAGIC** (WPF Application for MAGIC) is a Windows GUI application that provides an intuitive interface for using the MAGIC model. WAGIC allows users to easily train models, run evaluations, and visualize results through a user-friendly WPF interface. For more detail, please visit [WAGIC](https://github.com/WanThinnn/WAGIC.git)
+
+### Using Backend for [WAGIC](https://github.com/WanThinnn/WAGIC.git)
+
+1. **Start the MAGIC Backend API:**
+   ```python
+   python app.py
+   ```
+   This will start the Flask API server on `http://localhost:5000` which provides RESTful endpoints for training, evaluation, and visualization.
+
+2. **Download and Run WAGIC:**
+   - Clone the WAGIC repository: https://github.com/WanThinnn/WAGIC.git
+   - Open the WPF project in Visual Studio
+   - Build and run the application
+   - The GUI will automatically connect to the MAGIC backend API
+
+3. **Features:**
+   - **Dataset Selection**: Choose from available datasets (theia, cadets, trace, streamspot, wget)
+   - **Model Training**: Start training with real-time progress tracking
+   - **Model Evaluation**: Run evaluation and view performance metrics
+   - **Results Visualization**: Generate comprehensive performance charts
+   - **Model Management**: View trained models and their metadata
+
+### API Endpoints
+
+The backend provides the following REST API endpoints:
+
+- `POST /api/train` - Start model training
+- `GET /api/train/status` - Get training progress
+- `POST /api/eval` - Start model evaluation  
+- `GET /api/eval/status` - Get evaluation progress and results
+- `GET /api/datasets` - List available datasets
+- `GET /api/models` - List trained models
+- `POST /api/visualize` - Generate result visualizations
+- `GET /health` - API health check
+
+
+
+
+
 ## Cite 
  
 If you make advantage of MAGIC in your research, please cite the following in your manuscript:
