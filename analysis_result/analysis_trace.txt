@@ -1,0 +1,62 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: trace
+Analysis Time: 2025-05-25 14:07:36
+==================================================
+
+DATASET TYPE: Entity-level
+
+BASIC INFORMATION:
+  Training graphs: 4
+  Test graphs: 5
+  Node features: 11 dimensions
+  Edge features: 23 dimensions
+
+GROUND TRUTH:
+  Malicious nodes: 68086
+  Malicious node IDs: [3155582, 3096363, 3134931, 3149425, 3147079, 3155054, 3122483, 3127118, 3129406, 3104697]...
+  (showing first 10 out of 68086)
+
+SAMPLE GRAPH ANALYSIS:
+  Training Graph 0: 785330 nodes, 1054972 edges
+  Training Graph 1: 601035 nodes, 742053 edges
+  Training Graph 2: 604670 nodes, 702562 edges
+  Training Graph 3: 613495 nodes, 720809 edges
+  Test Graph 0: 785335 nodes, 1064177 edges
+  Test Graph 1: 601040 nodes, 748129 edges
+  Test Graph 2: 604675 nodes, 705719 edges
+
+SAMPLE GRAPH STATISTICS:
+  Total graphs analyzed: 7
+  
+  NODES:
+    Min: 601035
+    Max: 785335
+    Average: 656511.4
+    Median: 604675
+  
+  EDGES:
+    Min: 702562
+    Max: 1064177
+    Average: 819774.4
+    Median: 742053
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 7
+  
+  GRAPH DENSITY:
+    Min density: 0.000002
+    Max density: 0.000002
+    Average density: 0.000002
+  
+================================================
+AUC: 0.9998153809050484
+F1: 0.995736028228789
+PRECISION: 0.9917104937282383
+RECALL: 0.9997943776987928
+TN: 615452
+FN: 14
+TP: 68072
+FP: 569
+#Test_AUC: 0.9998±0.0000
