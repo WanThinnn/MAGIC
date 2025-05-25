@@ -51,3 +51,16 @@ SAMPLE GRAPH STATISTICS:
     Max density: 0.000020
     Average density: 0.000012
   
+==============================================================
+EVAL RESULT
+DGL backend not selected or invalid.  Assuming PyTorch for now.
+Setting the default backend to "pytorch". You can change it in the ~/.dgl/config.json file or export the DGLBACKEND environment variable.  Valid options are: pytorch, mxnet, tensorflow (all lowercase)
+AUC: 0.7539261826136495
+F1: 0.0
+PRECISION: 1.0
+RECALL: 0.0
+TN: 166962
+FN: 202
+TP: 0
+FP: 1
+#Test_AUC: 0.7539±0.0000
