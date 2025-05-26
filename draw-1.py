@@ -79,7 +79,7 @@ def plot_custom_dataset():
 
 # Biểu đồ so sánh tổng quan (Alternative)
 def plot_comparison_summary():
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+    fig, (ax1) = plt.subplots(1, figsize=(25, 6))
     
     # Subplot 1: Author datasets với 4 metrics
     datasets_author = ['StreamSpot', 'Wget', 'Trace', 'Theia', 'Cadets']
@@ -108,49 +108,49 @@ def plot_comparison_summary():
     ax1.set_title('Standard Datasets Performance', fontsize=14, fontweight='bold')
     ax1.set_ylabel('Performance Score', fontsize=12, fontweight='bold')
     ax1.set_ylim(0.9, 1.05)
-    ax1.legend(loc='lower right', fontsize=10)
+    ax1.legend(loc='upper right', fontsize=10)
     ax1.grid(axis='y', alpha=0.3)
     
-    # Subplot 2: Custom dataset với metrics có sẵn
-    datasets_custom = ['FiveDirections']
-    auc_custom = [0.7539]
-    f1_custom = [0.0]        # Từ analysis_fivedirections.txt
-    precision_custom = [1.0]  # Từ analysis_fivedirections.txt  
-    recall_custom = [0.0]     # Từ analysis_fivedirections.txt
+    # # Subplot 2: Custom dataset với metrics có sẵn
+    # datasets_custom = ['FiveDirections']
+    # auc_custom = [0.7539]
+    # f1_custom = [0.0]        # Từ analysis_fivedirections.txt
+    # precision_custom = [1.0]  # Từ analysis_fivedirections.txt  
+    # recall_custom = [0.0]     # Từ analysis_fivedirections.txt
     
-    x_custom = np.arange(len(datasets_custom))
+    # x_custom = np.arange(len(datasets_custom))
     
-    bars1_custom = ax2.bar(x_custom - 1.5*width, auc_custom, width, label='AUC', color='#2E86AB', alpha=0.8)
-    bars2_custom = ax2.bar(x_custom - 0.5*width, f1_custom, width, label='F1-Score', color='#A23B72', alpha=0.8)
-    bars3_custom = ax2.bar(x_custom + 0.5*width, precision_custom, width, label='Precision', color='#F18F01', alpha=0.8)
-    bars4_custom = ax2.bar(x_custom + 1.5*width, recall_custom, width, label='Recall', color='#C73E1D', alpha=0.8)
+    # bars1_custom = ax2.bar(x_custom - 1.5*width, auc_custom, width, label='AUC', color='#2E86AB', alpha=0.8)
+    # bars2_custom = ax2.bar(x_custom - 0.5*width, f1_custom, width, label='F1-Score', color='#A23B72', alpha=0.8)
+    # bars3_custom = ax2.bar(x_custom + 0.5*width, precision_custom, width, label='Precision', color='#F18F01', alpha=0.8)
+    # bars4_custom = ax2.bar(x_custom + 1.5*width, recall_custom, width, label='Recall', color='#C73E1D', alpha=0.8)
     
-    # Thêm giá trị cho subplot 2
-    values_custom = [auc_custom, f1_custom, precision_custom, recall_custom]
-    for bars, values in zip([bars1_custom, bars2_custom, bars3_custom, bars4_custom], values_custom):
-        for bar, value in zip(bars, values):
-            if value > 0.05:  # Chỉ hiển thị text nếu cột đủ cao
-                ax2.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.02,
-                        f'{value:.3f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
-            elif value > 0:  # Cho các giá trị nhỏ, hiển thị bên cạnh
-                ax2.text(bar.get_x() + bar.get_width() + 0.05, bar.get_height()/2,
-                        f'{value:.3f}', ha='left', va='center', fontsize=10, fontweight='bold')
+    # # Thêm giá trị cho subplot 2
+    # values_custom = [auc_custom, f1_custom, precision_custom, recall_custom]
+    # for bars, values in zip([bars1_custom, bars2_custom, bars3_custom, bars4_custom], values_custom):
+    #     for bar, value in zip(bars, values):
+    #         if value > 0.05:  # Chỉ hiển thị text nếu cột đủ cao
+    #             ax2.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.02,
+    #                     f'{value:.3f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
+    #         elif value > 0:  # Cho các giá trị nhỏ, hiển thị bên cạnh
+    #             ax2.text(bar.get_x() + bar.get_width() + 0.05, bar.get_height()/2,
+    #                     f'{value:.3f}', ha='left', va='center', fontsize=10, fontweight='bold')
     
-    ax2.set_xticks(x_custom)
-    ax2.set_xticklabels(datasets_custom, fontsize=12, fontweight='bold')
-    ax2.set_title('Custom Dataset Performance', fontsize=14, fontweight='bold')
-    ax2.set_ylabel('Performance Score', fontsize=12, fontweight='bold')
-    ax2.set_ylim(0, 1.1)
-    ax2.legend(loc='upper right', fontsize=10)
-    ax2.grid(axis='y', alpha=0.3)
+    # ax2.set_xticks(x_custom)
+    # ax2.set_xticklabels(datasets_custom, fontsize=12, fontweight='bold')
+    # ax2.set_title('Custom Dataset Performance', fontsize=14, fontweight='bold')
+    # ax2.set_ylabel('Performance Score', fontsize=12, fontweight='bold')
+    # ax2.set_ylim(0, 1.1)
+    # ax2.legend(loc='upper right', fontsize=10)
+    # ax2.grid(axis='y', alpha=0.3)
     
-    # Thêm reference lines cho custom dataset
-    ax2.axhline(y=0.5, color='gray', linestyle='--', alpha=0.7, linewidth=1)
-    ax2.axhline(y=0.9, color='green', linestyle='--', alpha=0.7, linewidth=1)
+    # # Thêm reference lines cho custom dataset
+    # ax2.axhline(y=0.5, color='gray', linestyle='--', alpha=0.7, linewidth=1)
+    # ax2.axhline(y=0.9, color='green', linestyle='--', alpha=0.7, linewidth=1)
     
-    # Thêm text cho reference lines
-    ax2.text(0.02, 0.52, 'Random', fontsize=9, alpha=0.7)
-    ax2.text(0.02, 0.92, 'Excellent', fontsize=9, alpha=0.7)
+    # # Thêm text cho reference lines
+    # ax2.text(0.02, 0.52, 'Random', fontsize=9, alpha=0.7)
+    # ax2.text(0.02, 0.92, 'Excellent', fontsize=9, alpha=0.7)
     
     plt.suptitle('MAGIC Model Performance: Standard vs Custom Datasets', fontsize=16, fontweight='bold')
     plt.tight_layout()
@@ -159,14 +159,14 @@ def plot_comparison_summary():
 
 # Chạy các hàm
 if __name__ == "__main__":
-    print("Generating performance charts for poster...")
+    # print("Generating performance charts for poster...")
     
-    plot_author_datasets()
-    plot_custom_dataset() 
+    # plot_author_datasets()
+    # plot_custom_dataset() 
     plot_comparison_summary()
     
-    print("✅ All charts generated successfully!")
-    print("📊 Files saved:")
-    print("   - magic_author_datasets.png")
-    print("   - magic_custom_dataset.png") 
-    print("   - magic_performance_comparison.png")
+    # print("✅ All charts generated successfully!")
+    # print("📊 Files saved:")
+    # print("   - magic_author_datasets.png")
+    # print("   - magic_custom_dataset.png") 
+    # print("   - magic_performance_comparison.png")
