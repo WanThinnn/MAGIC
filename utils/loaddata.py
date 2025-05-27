@@ -188,7 +188,7 @@ def load_rawdata(name):
     if name == 'streamspot': # Kiểm tra xem tên tập dữ liệu có phải là "streamspot" không
         path = './data/streamspot' # Đường dẫn đến thư mục chứa dữ liệu
         if os.path.exists(path + '/graphs.pkl'): # Kiểm tra xem tệp đã tồn tại chưa
-            print('Loading processed {} dataset...'.format(name)) # In thông báo đang tải tập dữ liệu
+            #print('Loading processed {} dataset...'.format(name)) # In thông báo đang tải tập dữ liệu
             raw_data = pkl.load(open(path + '/graphs.pkl', 'rb')) # Tải dữ liệu từ tệp
         else:
             raw_data = StreamspotDataset(name) # Tạo đối tượng của lớp StreamspotDataset
@@ -196,7 +196,7 @@ def load_rawdata(name):
     elif name == 'wget': # Kiểm tra xem tên tập dữ liệu có phải là "wget" không
         path = './data/wget' # Đường dẫn đến thư mục chứa dữ liệu
         if os.path.exists(path + '/graphs.pkl'): # Kiểm tra xem tệp đã tồn tại chưa
-            print('Loading processed {} dataset...'.format(name)) # In thông báo đang tải tập dữ liệu
+            #print('Loading processed {} dataset...'.format(name)) # In thông báo đang tải tập dữ liệu
             raw_data = pkl.load(open(path + '/graphs.pkl', 'rb')) # Tải dữ liệu từ tệp
         else:
             raw_data = WgetDataset(name) # Tạo đối tượng của lớp WgetDataset
@@ -230,7 +230,7 @@ def load_batch_level_dataset(dataset_name):
     edge_feature_dim += 1 # Tăng kích thước đặc trưng cạnh lên 1
     full_dataset = [i for i in range(len(dataset))] # Tạo danh sách chứa tất cả các chỉ số của đồ thị
     train_dataset = [i for i in range(len(dataset)) if dataset[i][1] == 0] # Tạo danh sách chứa các chỉ số của đồ thị huấn luyện
-    print('[n_graph, n_node_feat, n_edge_feat]: [{}, {}, {}]'.format(len(dataset), node_feature_dim, edge_feature_dim)) # In thông báo về số lượng đồ thị, kích thước đặc trưng nút và kích thước đặc trưng cạnh
+    # print('[n_graph, n_node_feat, n_edge_feat]: [{}, {}, {}]'.format(len(dataset), node_feature_dim, edge_feature_dim)) # In thông báo về số lượng đồ thị, kích thước đặc trưng nút và kích thước đặc trưng cạnh
 
     return {'dataset': dataset, # Trả về tập dữ liệu
             'train_index': train_dataset, # Trả về chỉ số của đồ thị huấn luyện

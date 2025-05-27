@@ -58,6 +58,8 @@ def main(main_args):
         # Đánh giá mô hình bằng phương pháp KNN
         test_auc, test_std = batch_level_evaluation(model, pooler, device, ['knn'], args.dataset,
                                                     main_args.n_dim, main_args.e_dim)
+        
+        
     else:
         # Dữ liệu cấp độ thực thể (entity-level)
         metadata = load_metadata(dataset_name)
