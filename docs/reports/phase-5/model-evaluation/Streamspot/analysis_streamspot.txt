@@ -1,0 +1,55 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: streamspot
+Analysis Time: 2025-05-25 13:44:03
+==================================================
+
+DATASET TYPE: Batch-level
+
+BASIC INFORMATION:
+  Total graphs: 600
+  Node features: 8 dimensions
+  Edge features: 20 dimensions
+  Data structure: <class 'tuple'>
+  Note: Extracted graphs from tuples
+
+GRAPH STATISTICS:
+  Total graphs analyzed: 600
+  
+  NODES:
+    Min: 6696
+    Max: 9280
+    Average: 8407.5
+    Median: 8703
+  
+  EDGES:
+    Min: 7621
+    Max: 41112
+    Average: 12715.4
+    Median: 13196
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 600
+  
+  GRAPH DENSITY:
+    Min density: 0.000144
+    Max density: 0.000482
+    Average density: 0.000178
+  
+TRAIN/TEST SPLIT:
+  Training graphs: 500
+  Test graphs: 100
+  Train ratio: 83.3%
+
+==================================
+AUC: 0.9995299999999999+0.0006885491994040947
+F1: 0.9954378141800693+0.006490254379841337
+PRECISION: 0.9919992170516341+0.011344021615179374
+RECALL: 0.9990000000000001+0.007000000000000006
+TN: 99.18+1.1779643458101776
+FN: 0.1+0.7000000000000002
+TP: 99.9+0.7
+FP: 0.82+1.1779643458101778
+#Test_AUC: 0.9995±0.0007
+

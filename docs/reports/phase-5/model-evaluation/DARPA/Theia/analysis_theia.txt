@@ -1,0 +1,60 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: theia
+Analysis Time: 2025-05-25 14:06:11
+==================================================
+
+DATASET TYPE: Entity-level
+
+BASIC INFORMATION:
+  Training graphs: 4
+  Test graphs: 1
+  Node features: 5 dimensions
+  Edge features: 17 dimensions
+
+GROUND TRUTH:
+  Malicious nodes: 25319
+  Malicious node IDs: [225626, 228314, 227750, 224167, 220093, 224982, 214149, 219876, 113490, 58354]...
+  (showing first 10 out of 25319)
+
+SAMPLE GRAPH ANALYSIS:
+  Training Graph 0: 167265 nodes, 284562 edges
+  Training Graph 1: 380204 nodes, 674723 edges
+  Training Graph 2: 342624 nodes, 587111 edges
+  Training Graph 3: 389106 nodes, 700318 edges
+  Test Graph 0: 344767 nodes, 628107 edges
+
+SAMPLE GRAPH STATISTICS:
+  Total graphs analyzed: 5
+  
+  NODES:
+    Min: 167265
+    Max: 389106
+    Average: 324793.2
+    Median: 344767
+  
+  EDGES:
+    Min: 284562
+    Max: 700318
+    Average: 574964.2
+    Median: 628107
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 5
+  
+  GRAPH DENSITY:
+    Min density: 0.000005
+    Max density: 0.000010
+    Average density: 0.000006
+  
+==========================================
+AUC: 0.9987304341522164
+F1: 0.991055525697366
+PRECISION: 0.9823077519981377
+RECALL: 0.9999605039693511
+TN: 318992
+FN: 1
+TP: 25318
+FP: 456
+#Test_AUC: 0.9987±0.0000

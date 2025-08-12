@@ -1,0 +1,6 @@
+Họp 28/3 - Giai đoạn 1:
+- Từ 2 bài báo và những bài báo liên quan -> tóm tắt nội dung của 2 bài -> chọn 1 bài
+- Vì cả 2 bài đều không có mã nguồn -> tìm hướng giải quyết, nếu không => build full từ a-z
+- Môn này trễ 2 tuần so với kế hoạch ban đầu => cố gắng xong trước 1 tuần trước khi báo cáo cuối kì (tuần 12, so với trc đó là 2 tuần)
+- Tất cả các thành viên đều phải tóm tắt bài báo
+- Tóm tắt đến hết chủ nhật tuần này, up lên tài liệu nhóm, phân công 1 bạn tổng hợp

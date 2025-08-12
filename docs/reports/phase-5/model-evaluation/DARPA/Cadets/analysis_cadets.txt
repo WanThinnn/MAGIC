@@ -1,0 +1,61 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: cadets
+Analysis Time: 2025-05-25 13:53:41
+==================================================
+
+DATASET TYPE: Entity-level
+
+BASIC INFORMATION:
+  Training graphs: 4
+  Test graphs: 1
+  Node features: 6 dimensions
+  Edge features: 27 dimensions
+
+GROUND TRUTH:
+  Malicious nodes: 12846
+  Malicious node IDs: [273041, 279791, 282300, 280899, 274597, 275808, 275635, 275780, 278428, 281448]...
+  (showing first 10 out of 12846)
+
+SAMPLE GRAPH ANALYSIS:
+  Training Graph 0: 386403 nodes, 738142 edges
+  Training Graph 1: 362637 nodes, 714073 edges
+  Training Graph 2: 275269 nodes, 563229 edges
+  Training Graph 3: 245553 nodes, 447521 edges
+  Test Graph 0: 357173 nodes, 840299 edges
+
+SAMPLE GRAPH STATISTICS:
+  Total graphs analyzed: 5
+  
+  NODES:
+    Min: 245553
+    Max: 386403
+    Average: 325407.0
+    Median: 357173
+  
+  EDGES:
+    Min: 447521
+    Max: 840299
+    Average: 660652.8
+    Median: 714073
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 5
+  
+  GRAPH DENSITY:
+    Min density: 0.000005
+    Max density: 0.000007
+    Average density: 0.000006
+  
+============================================
+EVAL RESULT
+AUC: 0.9977379100520937
+F1: 0.9701373902123143
+PRECISION: 0.9440883977900553
+RECALL: 0.9976646426903316
+TN: 343568
+FN: 30
+TP: 12816
+FP: 759
+#Test_AUC: 0.9977±0.0000

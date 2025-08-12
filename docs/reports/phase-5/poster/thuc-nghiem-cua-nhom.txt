@@ -1,0 +1,20 @@
+- Qui mô & Đặc tính
++ 21 đồ thị huấn luyện, 7 đồ thị kiểm tra, mỗi đồ thị ~145–375 nghìn nút và ~380–688 nghìn cạnh.
++ 13 chiều đặc trưng nút, 25 chiều đặc trưng cạnh.
++ 202 thực thể độc hại phân bố rải rác khắp các đồ thị.
+
+- Hiệu năng phát hiện
++ AUC ≈ 0.754: Mô hình có khả năng phân biệt nút độc hại / lành tốt hơn ngẫu nhiên, nhưng chưa cao.
++ Precision = 1.0, Recall = 0.0, F1 = 0.0:
++ Mô hình hầu như không phát hiện được thực thể độc hại nào (TP = 0, FN = 202).
++ Chỉ có 1 dự đoán dương nhưng là sai (FP = 1), dẫn đến precision “1.0” theo cách tính đặc biệt khi TP = 0; thực tế cho thấy mô hình quá thận trọng, bỏ sót toàn bộ tín hiệu tấn công.
+
+- Kết luận & Khuyến nghị
++ Mức độ thất bại: Recall = 0 ⇒ mô hình không phục vụ mục tiêu phát hiện APT.
+
+- Nguyên nhân khả dĩ:
++ Phân bố bất cân bằng cực đoan (202 độc/≈167 k lành).
++ Ngưỡng phát hiện mặc định quá cao.
++ Cần tinh chỉnh ngưỡng, cân bằng lớp hoặc tăng cường huấn luyện (thêm dữ liệu tấn công, sampling).
+
+- Hướng tiếp theo: điều chỉnh threshold, cập nhật bộ huấn luyện với các ví dụ ngắn tốt hơn hoặc thử các cơ chế xử lý bất cân bằng để cải thiện recall.

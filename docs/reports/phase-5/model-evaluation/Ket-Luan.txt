@@ -1,0 +1,5 @@
+- Thực nghiệm 1: MAGIC trên 5 dataset gốc (streamspot, wget, trace, theia, cadets) đều đạt hiệu suất rất cao với AUC > 0.97, trung bình ~0.99; F1-score dao động 0.94–0.99; Precision & Recall luôn trên 0.91 và 0.97. Điều này khẳng định khả năng phân biệt bất thường của MAGIC trong cả kịch bản batch-level và entity-level.
+
+- Thực nghiệm 2: MAGIC trên dataset tự thêm (fivedirections) cho thấy AUC ~ 0.75 nhưng Recall = 0 ⇒ mô hình chưa bắt được node độc hại nào, mặc dù Precision = 1.0. Kết quả này chỉ ra sự khác biệt lớn về phân phối đặc trưng của FiveDirections so với các dataset trong bài báo, và nhấn mạnh nhu cầu tinh chỉnh masking strategy hoặc thêm bước self-supervision phù hợp để mô hình có thể generalize tốt hơn trên data “thô” thực tế.
+
+Tóm lại: MAGIC chứng minh tính hiệu quả vượt trội trên các benchmark chuẩn, nhưng để áp dụng rộng rãi cho dữ liệu enterprise như FiveDirections, cần điều chỉnh tham số và cơ chế masking để duy trì cả Precision và Recall cao.

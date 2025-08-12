@@ -1,0 +1,27 @@
+I. Nội dung họp
+1. Tổng kết giai đoạn 1: hướng đi, dữ liệu và ý tưởng gđ tiếp
+2. Nhận định tình hình hiện tại
+3. Phân công nửa cuối giai đoạn 2 và giai đoạn 3
+- Phân tích kỹ bài báo (cá nhân)
+- Sơ lược mã nguồn (cá nhân)
+- Xem kiến trúc/mô hình triển khai (cá nhân)
+- Đề xuất kịch bản triển khai (cá nhân)
+- Cài đặt/cấu hình môi trường (cá nhân)
+- Chạy thử (cá nhân)
+- Phân công phân tích mã nguồn (Nhóm)
+
+4. Đề xuất hướng đi cho giai đoạn 4
+
+II. Phân công
+0. Cài đặt môi trường: mini-conda, python 3.8.10
+1. Phân công phân tích mã nguồn
+- Tất cả các thành viên phải xem hết mã nguồn, tuy nhiên, để thuận tiện cho các bạn xem, mình sẽ phân chia mỗi người sẽ đi phân tích từng phần của mã nguồn, sau đó sẽ kết hợp lại.
+- Cụ thể:
++ thư mục utils -> config.py, loaddata.py, poolers.py, streamspot_parser.py => Thiên
++ thư mục utils -> trace_parser.py, utils.py và thư mục model -> autoencoder.py, eval.py => Phương 
++ thư mục utils -> wget_parser.py và 2 file train.py + eval.py ở thư mục gốc => Huy
++ thư mục model -> gat.py, loss_func.py, mlp.py, train.py => Phúc
+
+
+
+2. Deadline trước 17h thứ 4 tuần sau

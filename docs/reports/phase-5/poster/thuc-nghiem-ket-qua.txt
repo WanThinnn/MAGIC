@@ -1,0 +1,20 @@
+1. Thực nghiệm
+- Tiến hành trên 131 GB nhật ký kiểm toán, chỉ dùng dữ liệu lành tính để huấn luyện.
+- Ba bộ công khai:
+- StreamSpot (600 lô; 500 lành/100 tấn công) – phát hiện cấp độ lô.
+- Unicorn Wget (150 lô; 125 lành/25 tấn công) – tấn công lén lút, phát hiện cấp độ lô.
+- DARPA E3 (51.7 GB; >6.5 triệu thực thể) – phát hiện cấp độ thực thể.
+
+2. Kết quả chính
+- StreamSpot (dễ nhất): AUC = 0.9995; Precision = 99.41%; Recall = 100.00%; F1 = 99.71%; FPR = 0.59%.
+- Unicorn Wget (khó nhất): Precision = 98.02%; Recall = 96.00%; F1 = 96.98%; FPR = 2.00%. => Phát hiện thành công trung bình 24/25 lô tấn công.
+- DARPA E3 (thực thể):
++ Recall trung bình = 99.91%; FPR = 0.15%.
++ AUC ≈ 0.998–0.9999 qua ba tập con Trace/THEIA/CADETS.
+
+3. So sánh & Hiệu năng
+- MAGIC vượt trội so với Unicorn, PassGPT, ThreaTrace, ShadeWatcher cả về độ chính xác lẫn tốc độ (huấn luyện nhanh gấp ~51× ShadeWatcher).
+- FPR rất thấp (<0.2%) cho phép triển khai thực tế.
+- Tính đa dụng cao: phát hiện cả cấp độ lô và thực thể, khả năng mở rộng tốt trên CPU/GPU.
+
+Kết luận: MAGIC là giải pháp phát hiện APT không giám sát hiệu quả, ổn định và chi phí thấp, phù hợp cho cả doanh nghiệp nhỏ lẫn môi trường sản xuất lớn.

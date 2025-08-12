@@ -1,0 +1,53 @@
+=== MAGIC Dataset Analysis Report ===
+Dataset: wget
+Analysis Time: 2025-05-25 15:56:15
+==================================================
+
+DATASET TYPE: Batch-level
+
+BASIC INFORMATION:
+  Total graphs: 150
+  Node features: 8 dimensions
+  Edge features: 4 dimensions
+  Data structure: <class 'tuple'>
+  Note: Extracted graphs from tuples
+
+GRAPH STATISTICS:
+  Total graphs analyzed: 150
+  
+  NODES:
+    Min: 14106
+    Max: 126356
+    Average: 36812.1
+    Median: 33805
+  
+  EDGES:
+    Min: 33226
+    Max: 351388
+    Average: 96017.8
+    Median: 85467
+  
+  SIZE DISTRIBUTION:
+    Small graphs (≤100 nodes): 0
+    Medium graphs (101-1000 nodes): 0
+    Large graphs (>1000 nodes): 150
+  
+  GRAPH DENSITY:
+    Min density: 0.000022
+    Max density: 0.000196
+    Average density: 0.000081
+  
+TRAIN/TEST SPLIT:
+  Training graphs: 125
+  Test graphs: 25
+  Train ratio: 83.3%
+============================================
+AUC: 0.9738559999999999+0.018954726692833105
+F1: 0.9435879819624557+0.02240074260209074
+PRECISION: 0.9138507541406342+0.043351874379687245
+RECALL: 0.9775999999999999+0.031658174299855
+TN: 22.62+1.3021520648526423
+FN: 0.56+0.7914543574963752
+TP: 24.44+0.7914543574963752
+FP: 2.38+1.3021520648526423
+#Test_AUC: 0.9739±0.0190

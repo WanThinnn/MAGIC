@@ -1,0 +1,20 @@
+Họp Mã Độc - 18/5/2025
+
+1. Tổng kết giai đoạn 3
+2. Triển khai giai đoạn 4
+- Cài ViewLF để xem file lớn: https://www.withdata.com/blog/bigtextfileviewer/view-large-tsv.html?utm_source=chatgpt.com#download-top
+- Nội dung được tuân theo file Docx
+- Dự kiến báo cáo: 26/5/2025
+
+3. Phân công mục A (tham khảo: Bao-cao-phan-tich-dataset.docx)
+- Dataset StreamPot + Wget: Phúc
+- Dataset Cadets:  Thiên
+- Dataset Theia: Huy
+- Dataset Trace: NP
+=> Trước 17h 21/5/2025
+
+4. Phân công mục B (chưa có sường, up sau)
+	Ai làm dataset nào thì chạy dataset đó
+=> Trước 17h ngày 23/5
+
+5. Phân công mục C (thứ 6 phân công)
